@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>La isla de Andrew</title>
+<meta name="description" content="Una islita tranquila para celebrar el cumpleaños de Andrew. Entra, pasea con tus amigos y déjale un mensaje.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="🌸 La isla de Andrew">
+<meta property="og:description" content="Una islita tranquila para celebrar su cumpleaños. Entra, pasea con tus amigos y déjale un mensaje.">
+<meta property="og:url" content="https://lauren-dayanna-villanueva-camero.github.io/isla-andrew/">
+<meta property="og:image" content="https://lauren-dayanna-villanueva-camero.github.io/isla-andrew/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f6dfe9">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎂</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--rosa:#f7b7c8;--lila:#cdb8f0;--menta:#b8e6d0;--cielo:#bfe0f5;--crema:#fff6ea;--tinta:#5b4a6b;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:#f3e9f7;font-family:"Baloo 2",system-ui,sans-serif;color:var(--tinta);
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  input,textarea,.msj,#carta p{-webkit-user-select:text;user-select:text}
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .hidden{display:none!important}
+  button{font-family:inherit;cursor:pointer;touch-action:manipulation}
+  /* Pantalla de inicio */
+  #inicio{position:fixed;inset:0;display:flex;padding:16px;
+    background:linear-gradient(160deg,rgba(253,226,234,.62) 0%,rgba(233,222,250,.55) 50%,rgba(217,240,247,.62) 100%);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);z-index:20;overflow:auto}
+  .tarjeta{background:rgba(255,255,255,.9);border-radius:28px;padding:24px 26px;max-width:460px;width:100%;margin:auto;
+    box-shadow:0 18px 50px rgba(120,90,150,.18);text-align:center}
+  .tarjeta h1{margin:0;font-size:32px;line-height:1.1;color:#b0688a}
+  .tarjeta p{margin:6px 0 14px;font-size:16px}
+  .tarjeta label{display:block;text-align:left;font-weight:600;margin:12px 0 6px;font-size:15px}
+  .tarjeta input[type=text]{width:100%;padding:11px 14px;border-radius:14px;border:2px solid #ead9f2;font:inherit;font-size:17px;color:var(--tinta);background:#fff}
+  .opciones{display:flex;flex-wrap:wrap;gap:8px}
+  .color{width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #ead9f2}
+  .color.sel{box-shadow:0 0 0 3px #b0688a}
+  .chip{padding:7px 12px;border-radius:999px;border:2px solid #ead9f2;background:#fff;font-size:15px;color:var(--tinta)}
+  .chip.sel{border-color:#b0688a;background:#fdeef3}
+  .grande{margin-top:18px;width:100%;padding:13px;border:0;border-radius:16px;font-size:20px;font-weight:800;color:#fff;
+    background:linear-gradient(90deg,#f19ab6,#b79be8);box-shadow:0 8px 20px rgba(200,120,170,.35)}
+  .ayuda{font-size:13.5px;opacity:.8;margin-top:12px;line-height:1.45}
+  /* HUD */
+  #hud{position:fixed;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;z-index:5;pointer-events:none;max-width:calc(100vw - 172px)}
+  .pill{background:rgba(255,255,255,.85);border-radius:999px;padding:5px 13px;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(120,90,150,.15);width:max-content;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill.titulo{font-weight:800;color:#b0688a;font-size:17px}
+  #mapa{position:fixed;top:12px;right:12px;width:132px;height:132px;border-radius:50%;z-index:5;
+    background:rgba(255,255,255,.7);box-shadow:0 4px 14px rgba(120,90,150,.18);pointer-events:none}
+  #barra{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:6}
+  .redondo{width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.9);font-size:23px;box-shadow:0 4px 14px rgba(120,90,150,.18)}
+  #accion{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);z-index:6;border:0;border-radius:999px;
+    padding:11px 22px;font-size:18px;font-weight:800;color:#fff;background:linear-gradient(90deg,#f19ab6,#b79be8);box-shadow:0 8px 20px rgba(200,120,170,.35)}
+  #toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(255,255,255,.95);border-radius:18px;
+    padding:10px 18px;font-weight:600;font-size:17px;box-shadow:0 8px 24px rgba(120,90,150,.2);max-width:90vw;text-align:center;
+    transition:opacity .4s;opacity:0;pointer-events:none}
+  #toast.ver{opacity:1}
+  #joy{position:fixed;left:22px;bottom:22px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.45);z-index:6;touch-action:none}
+  #joy i{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.95);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+  #saltar{position:fixed;right:24px;bottom:30px;z-index:6;width:70px;height:70px;font-size:16px;font-weight:800;color:var(--tinta)}
+  #sonido{position:fixed;right:12px;top:152px;z-index:6;width:40px;height:40px;font-size:18px}
+  /* Panel de mensajes / carta */
+  .modal{position:fixed;inset:0;background:rgba(90,70,110,.35);display:flex;align-items:center;justify-content:center;z-index:15;padding:14px}
+  .modal .tarjeta{max-height:88vh;display:flex;flex-direction:column;text-align:left;background:rgba(255,255,255,.96)}
+  .modal.arriba{align-items:flex-start;padding-top:max(14px,9vh);background:rgba(90,70,110,.12)}
+  .modal.arriba .tarjeta{padding:14px 16px;border-radius:22px}
+  #decirTexto{flex:1;min-width:0;padding:11px 14px;border-radius:14px;border:2px solid #ead9f2;font:inherit;font-size:17px;color:var(--tinta);background:#fff}
+  #decirEnviar{width:auto;padding:11px 18px;font-size:17px;margin:0}
+  .modal h2{margin:0 0 6px;color:#b0688a;font-size:24px}
+  textarea{width:100%;min-height:84px;border-radius:14px;border:2px solid #ead9f2;padding:10px 12px;font:inherit;font-size:16px;color:var(--tinta);resize:vertical}
+  .fila{display:flex;gap:8px;margin-top:8px;align-items:center}
+  .fila .grande{margin:0}
+  .sec{border:0;background:#f1e8f7;color:var(--tinta);border-radius:14px;padding:10px 16px;font-weight:600;font-size:16px}
+  #lista{overflow:auto;margin-top:12px;display:flex;flex-direction:column;gap:8px;min-height:60px}
+  .msj{background:#fff;border-radius:14px;padding:9px 12px;border-left:6px solid var(--rosa);box-shadow:0 2px 8px rgba(120,90,150,.08)}
+  .msj b{display:block;font-size:14px;opacity:.85}
+  .msj span{white-space:pre-wrap;word-wrap:break-word;font-size:16px}
+  .nota{font-size:13px;opacity:.75}
+  #carta p{font-size:18px;line-height:1.5;white-space:pre-wrap}
+  /* Pantallas angostas y celulares en vertical */
+  @media (max-width:640px){
+    #hud{max-width:calc(100vw - 128px)}
+    .color{width:32px;height:32px}
+    #mapa{width:96px;height:96px}
+    #sonido{top:116px}
+    .pill{font-size:13.5px;padding:4px 11px}
+    .pill.titulo{font-size:15px}
+    #toast{top:112px;font-size:15.5px}
+    .tarjeta{padding:20px 18px}
+    .tarjeta h1{font-size:27px}
+  }
+  @media (pointer:coarse) and (max-width:640px){
+    #barra{bottom:158px}
+    #accion{bottom:218px;white-space:nowrap}
+  }
+  /* Celulares en horizontal: poca altura */
+  @media (max-height:480px){
+    .pill.titulo{display:none}
+    #toast{top:10px;max-width:calc(100vw - 350px);font-size:14.5px;padding:7px 14px}
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="inicio">
+  <div class="tarjeta">
+    <h1>🌸 La isla de Andrew 🌸</h1>
+    <p>Una islita tranquila para celebrar juntos su cumpleaños.</p>
+    <label for="nombre">¿Cómo te llamas?</label>
+    <input id="nombre" type="text" maxlength="18" placeholder="Tu nombre" autocomplete="off">
+    <label>Tu color</label>
+    <div class="opciones" id="colores"></div>
+    <label>Orejitas</label>
+    <div class="opciones" id="orejas"></div>
+    <label>Accesorio</label>
+    <div class="opciones" id="accesorios"></div>
+    <button class="grande" id="entrar">Entrar a la isla ✨</button>
+    <div class="ayuda" id="ayuda">Muévete con <b>WASD</b> o las flechas, salta con <b>espacio</b>, usa <b>E</b> para interactuar y <b>T</b> para hablar. Arrastra para girar la cámara.</div>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div class="pill titulo">🎂 Feliz cumpleaños, Andrew</div>
+  <div class="pill" id="contadores">🐾 0/7 · 🎁 0/5</div>
+  <div class="pill" id="online">👥 1 en la isla</div>
+</div>
+<canvas id="mapa" class="hidden" width="264" height="264"></canvas>
+<button id="sonido" class="redondo hidden" title="Música">🎵</button>
+<button id="accion" class="hidden"></button>
+<div id="barra" class="hidden">
+  <button class="redondo" data-emote="👋" title="Saludar (1)">👋</button>
+  <button class="redondo" data-emote="💖" title="Corazón (2)">💖</button>
+  <button class="redondo" data-emote="🎉" title="Fiesta (3)">🎉</button>
+  <button class="redondo" data-emote="😊" title="Sonrisa (4)">😊</button>
+  <button class="redondo" id="abrirDecir" title="Hablar (T)">💬</button>
+  <button class="redondo" id="abrirMensajes" title="Mensajes para Andrew (M)">💌</button>
+</div>
+<div id="joy" class="hidden"><i></i></div>
+<button id="saltar" class="redondo hidden">Saltar</button>
+<div id="toast"></div>
+
+<div id="panelMensajes" class="modal hidden">
+  <div class="tarjeta">
+    <h2>💌 Mensajes para Andrew</h2>
+    <textarea id="texto" maxlength="400" placeholder="Escríbele algo bonito..."></textarea>
+    <div class="fila">
+      <button class="grande" id="enviar" style="flex:1">Enviar</button>
+      <button class="sec" id="cerrarMensajes">Cerrar</button>
+    </div>
+    <div class="nota" id="estadoMensajes"></div>
+    <div id="lista"></div>
+  </div>
+</div>
+
+<div id="panelDecir" class="modal arriba hidden">
+  <div class="tarjeta">
+    <div class="fila" style="margin-top:0">
+      <input id="decirTexto" type="text" maxlength="48" placeholder="Di algo a tus amigos..." autocomplete="off" enterkeyhint="send">
+      <button class="grande" id="decirEnviar">Decir</button>
+    </div>
+    <div class="nota" style="margin-top:6px">Aparece un ratito sobre tu muñequito. Para dejarle algo guardado a Andrew usa 💌.</div>
+  </div>
+</div>
+
+<div id="carta" class="modal hidden">
+  <div class="tarjeta">
+    <h2>🎁 ¡Encontraste todos los regalos!</h2>
+    <p id="cartaTexto"></p>
+    <button class="grande" id="cerrarCarta">Seguir paseando</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+/* ============ Textos personalizables ============ */
+const CUMPLE = "Andrew";
+/* Dirección de la base de datos de Firebase para el enlace público. Vacío = vista previa sin servidor. */
+const CONFIG = { firebaseUrl: "https://isla-andrew-default-rtdb.firebaseio.com" };
+const FRASES_REGALOS = [
+  "Andrew, gracias por tu calma, que contagia paz a todos.",
+  "Gracias por escuchar siempre, aunque sea a las 3 a.m.",
+  "Tu risa es de nuestras cosas favoritas en el mundo.",
+  "Ojalá este año te traiga muchos gatitos, perritos y días bonitos.",
+  "¡Te queremos muchísimo! Feliz cumpleaños 💖"
+];
+
+if (!window.THREE) {
+  document.body.innerHTML = '<p style="padding:30px;font-size:18px">No se pudo cargar el 3D. Revisa tu conexión y recarga la página 💗</p>';
+  throw new Error("three no cargó");
+}
+const $ = s => document.querySelector(s);
+const TAU = Math.PI * 2;
+const rand = (a, b) => a + Math.random() * (b - a);
+const lerp = (a, b, t) => a + (b - a) * t;
+function angLerp(a, b, t){ let d = ((b - a + Math.PI) % TAU + TAU) % TAU - Math.PI; return a + d * t; }
+// Recorta sin partir emojis por la mitad (n = longitud máxima tal como la cuenta la base de datos)
+function recortar(txt, n){ const cs = Array.from(String(txt)); while (cs.join("").length > n) cs.pop(); return cs.join(""); }
+function seeded(seed){ return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+/* ============ Escena ============ */
+const esTactil = matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+const canvas = $("#c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, esTactil ? 1.5 : 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene();
+const CIELO = new THREE.Color(0xf6dfe9);
+scene.fog = new THREE.Fog(0xf3e2ee, 55, 130);
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
+function resize(){
+  renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight;
+  camera.fov = camera.aspect < 0.8 ? 70 : 55; // en vertical se abre el ángulo para ver más isla
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize); resize();
+
+// Cielo con degradado
+{
+  const geo = new THREE.SphereGeometry(200, 32, 16);
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color(0xb9d8f2) }, mid: { value: new THREE.Color(0xf3dcef) }, bot: { value: new THREE.Color(0xfde7d6) } },
+    vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+    fragmentShader: "uniform vec3 top; uniform vec3 mid; uniform vec3 bot; varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 c = h>0.0 ? mix(mid, top, smoothstep(0.0,0.6,h)) : mix(mid, bot, smoothstep(0.0,-0.3,h)); gl_FragColor = vec4(c,1.0); }"
+  });
+  scene.add(new THREE.Mesh(geo, mat));
+}
+scene.add(new THREE.HemisphereLight(0xfff4fb, 0xb9dcc0, 0.5));
+const sol = new THREE.DirectionalLight(0xfff0e0, 0.5);
+sol.position.set(25, 45, 18);
+sol.castShadow = true;
+sol.shadow.mapSize.set(esTactil ? 1024 : 2048, esTactil ? 1024 : 2048);
+Object.assign(sol.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 120 });
+sol.shadow.bias = -0.0005;
+scene.add(sol);
+
+const matCache = {};
+function M(color, extra){ const k = color + JSON.stringify(extra || {}); return matCache[k] || (matCache[k] = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.85, metalness: 0 }, extra))); }
+function add(parent, geo, mat, x = 0, y = 0, z = 0, opts = {}){
+  const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z);
+  m.castShadow = opts.cast !== false; m.receiveShadow = opts.recv !== false;
+  parent.add(m); return m;
+}
+const colliders = []; // {x,z,r}
+// Objetos grandes que se vuelven translúcidos cuando quedan entre la cámara y tu muñequito
+const ocultables = [];
+function registrarOcultable(grupo, centro, radio, poste = false){
+  const copias = new Map();
+  grupo.traverse(o => { if (!o.isMesh) return; let m = copias.get(o.material); if (!m){ m = o.material.clone(); copias.set(o.material, m); } o.material = m; });
+  ocultables.push({ centro, radio, poste, mats: [...copias.values()], op: 1 });
+}
+const _ab = new THREE.Vector3(), _ac = new THREE.Vector3();
+function actualizarOcultables(dt, cam, objetivo){
+  _ab.subVectors(objetivo, cam); const len2 = _ab.lengthSq() || 1;
+  const l2 = _ab.x * _ab.x + _ab.z * _ab.z || 1;
+  for (const o of ocultables){
+    let dist;
+    if (o.poste){ // postes altos y delgados: se mide solo en planta
+      const u = Math.max(0, Math.min(1, ((o.centro.x - cam.x) * _ab.x + (o.centro.z - cam.z) * _ab.z) / l2));
+      dist = Math.hypot(cam.x + _ab.x * u - o.centro.x, cam.z + _ab.z * u - o.centro.z);
+    } else {
+      const u = Math.max(0, Math.min(1, _ac.subVectors(o.centro, cam).dot(_ab) / len2));
+      dist = _ac.copy(cam).addScaledVector(_ab, u).distanceTo(o.centro);
+    }
+    const tapa = jugando && dist < o.radio;
+    const meta = tapa ? 0.2 : 1;
+    if (o.op === meta) continue;
+    o.op = Math.abs(o.op - meta) < 0.02 ? meta : lerp(o.op, meta, Math.min(1, dt * 8));
+    for (const m of o.mats){ m.opacity = o.op; m.transparent = o.op < 1; }
+  }
+}
+const RADIO_ISLA = 31;
+
+/* ============ Isla ============ */
+const agua = add(scene, new THREE.CircleGeometry(190, 64), new THREE.MeshStandardMaterial({ color: 0xa9dcef, roughness: 0.35, metalness: 0.05 }), 0, -0.7, 0, { cast: false });
+agua.rotation.x = -Math.PI / 2;
+add(scene, new THREE.CylinderGeometry(35, 37, 1.2, 72), M(0xf3d9a8), 0, -0.85, 0, { cast: false });
+add(scene, new THREE.CylinderGeometry(32.5, 34, 1.4, 72), M(0x9fd69a), 0, -0.7, 0, { cast: false });
+// caminitos
+const caminoMat = M(0xe9cfae);
+for (let i = 0; i < 40; i++){
+  const a = i / 40 * TAU; const r = 13;
+  const p = add(scene, new THREE.CylinderGeometry(0.75, 0.75, 0.08, 14), caminoMat, Math.cos(a) * r, 0.01, Math.sin(a) * r, { cast: false });
+  p.scale.z = 0.8;
+}
+// flores (instanciadas)
+{
+  const rnd = seeded(7);
+  const n = 260, geo = new THREE.SphereGeometry(0.13, 8, 6);
+  const inst = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.8 }), n);
+  const cols = [0xffc4d6, 0xffffff, 0xd9c6ff, 0xfff0a8, 0xbfe3ff];
+  const dummy = new THREE.Object3D(); const c = new THREE.Color();
+  for (let i = 0; i < n; i++){
+    let x, z; do { x = (rnd() * 2 - 1) * 30; z = (rnd() * 2 - 1) * 30; } while (Math.hypot(x, z) > 30 || Math.hypot(x, z) < 6);
+    dummy.position.set(x, 0.12, z); dummy.updateMatrix(); inst.setMatrixAt(i, dummy.matrix);
+    inst.setColorAt(i, c.setHex(cols[i % cols.length]));
+  }
+  scene.add(inst);
+}
+// árboles algodón de azúcar
+function arbol(x, z, s, color){
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s);
+  add(g, new THREE.CylinderGeometry(0.25, 0.35, 2.2, 8), M(0xc9a27e), 0, 1.1, 0);
+  add(g, new THREE.SphereGeometry(1.4, 16, 12), M(color), 0, 2.9, 0);
+  add(g, new THREE.SphereGeometry(1.0, 16, 12), M(color), 0.8, 2.5, 0.3);
+  add(g, new THREE.SphereGeometry(0.9, 16, 12), M(color), -0.7, 2.6, -0.3);
+  scene.add(g); colliders.push({ x, z, r: 0.5 * s });
+  registrarOcultable(g, new THREE.Vector3(x, 2.7 * s, z), 2.1 * s);
+}
+[[-22, -8, 1.2, 0xf9c6d6], [-18, -18, 1.0, 0xd8c7f3], [-6, -25, 1.1, 0xc4e8d1], [8, -24, 1.3, 0xf9c6d6], [20, -16, 1.0, 0xd8c7f3],
+ [25, -4, 1.1, 0xc4e8d1], [24, 14, 1.2, 0xf9c6d6], [6, 26, 1.0, 0xd8c7f3], [-8, 25, 1.2, 0xc4e8d1], [-25, 12, 1.0, 0xf9c6d6],
+ [-27, 2, 0.9, 0xd8c7f3], [15, 24, 0.9, 0xc4e8d1]].forEach(a => arbol(...a));
+// nubes
+const nubes = [];
+for (let i = 0; i < 9; i++){
+  const g = new THREE.Group();
+  for (let j = 0; j < 4; j++) add(g, new THREE.SphereGeometry(rand(2, 3.5), 12, 10), M(0xffffff, { roughness: 1 }), j * 2.6 - 4, rand(-0.5, 0.8), rand(-1, 1), { cast: false, recv: false });
+  const a = rand(0, TAU), r = rand(50, 110); g.position.set(Math.cos(a) * r, rand(28, 42), Math.sin(a) * r);
+  g.userData.v = rand(0.4, 1.0); scene.add(g); nubes.push(g);
+}
+
+/* ============ Letrero ============ */
+function canvasTexto(lineas, w, h, opts = {}){
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d");
+  x.fillStyle = opts.fondo || "#fff6ea"; x.beginPath(); x.roundRect ? x.roundRect(0, 0, w, h, 40) : x.rect(0, 0, w, h); x.fill();
+  x.textAlign = "center"; x.textBaseline = "middle";
+  lineas.forEach((l, i) => { x.font = l.f; x.fillStyle = l.c; x.fillText(l.t, w / 2, h * (i + 1) / (lineas.length + 1)); });
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t;
+}
+const letrero = new THREE.Group(); letrero.position.set(0, 0, 15); scene.add(letrero);
+for (const lado of [-1, 1]){
+  const poste = add(letrero, new THREE.CylinderGeometry(0.22, 0.22, 7.6, 10), M(0xeaa9c0), lado * 5.4, 3.8, 0);
+  registrarOcultable(poste, new THREE.Vector3(lado * 5.4, 3.8, 15), 0.75, true);
+}
+colliders.push({ x: -5.4, z: 15, r: 0.3 }, { x: 5.4, z: 15, r: 0.3 });
+const cartel = add(letrero, new THREE.PlaneGeometry(10, 2.6), new THREE.MeshBasicMaterial({ alphaTest: 0.5 }), 0, 6.0, 0.02, { cast: false });
+add(letrero, new THREE.PlaneGeometry(10, 2.6), cartel.material, 0, 6.0, -0.02).rotation.y = Math.PI;
+function pintarLetrero(){
+  cartel.material.map = canvasTexto([
+    { t: "¡Feliz cumpleaños,", f: "800 92px 'Baloo 2', sans-serif", c: "#c07898" },
+    { t: CUMPLE + "!", f: "800 130px 'Baloo 2', sans-serif", c: "#9a7ad6" }
+  ], 1200, 312);
+  cartel.material.needsUpdate = true;
+}
+pintarLetrero();
+// guirnalda de banderitas
+{
+  const cols = [0xf7b7c8, 0xcdb8f0, 0xb8e6d0, 0xfde3a7, 0xbfe0f5];
+  for (let i = 0; i < 11; i++){
+    const t = i / 10, x = lerp(-5.2, 5.2, t), y = 4.75 - Math.sin(t * Math.PI) * 0.35;
+    const f = add(letrero, new THREE.ConeGeometry(0.3, 0.6, 3), M(cols[i % 5]), x, y - 0.3, 0);
+    f.rotation.x = Math.PI;
+  }
+}
+
+/* ============ Pastel con velas ============ */
+const pastel = new THREE.Group(); scene.add(pastel);
+add(pastel, new THREE.CylinderGeometry(3.6, 3.7, 2.0, 40), M(0xf8c3d3), 0, 1.0, 0);
+add(pastel, new THREE.TorusGeometry(3.6, 0.22, 10, 48), M(0xfff6ea), 0, 2.0, 0).rotation.x = Math.PI / 2;
+add(pastel, new THREE.CylinderGeometry(2.6, 2.6, 1.6, 40), M(0xfff1dc), 0, 2.8, 0);
+add(pastel, new THREE.TorusGeometry(2.6, 0.2, 10, 48), M(0xf8c3d3), 0, 3.6, 0).rotation.x = Math.PI / 2;
+add(pastel, new THREE.CylinderGeometry(1.6, 1.6, 1.3, 36), M(0xd9c6f5), 0, 4.25, 0);
+add(pastel, new THREE.TorusGeometry(1.6, 0.17, 10, 40), M(0xfff6ea), 0, 4.9, 0).rotation.x = Math.PI / 2;
+// fresitas
+for (let i = 0; i < 10; i++){ const a = i / 10 * TAU; add(pastel, new THREE.SphereGeometry(0.28, 10, 8), M(0xff9fb5), Math.cos(a) * 3.0, 2.15, Math.sin(a) * 3.0); }
+// velas
+const llamas = []; let velasEncendidas = true;
+for (let i = 0; i < 7; i++){
+  const a = i / 7 * TAU, x = Math.cos(a) * 1.0, z = Math.sin(a) * 1.0;
+  add(pastel, new THREE.CylinderGeometry(0.09, 0.09, 0.8, 8), M([0xbfe0f5, 0xf7b7c8, 0xb8e6d0][i % 3]), x, 5.3, z);
+  const ll = add(pastel, new THREE.SphereGeometry(0.13, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd27a }), x, 5.85, z, { cast: false });
+  ll.scale.y = 1.6; llamas.push(ll);
+}
+const luzPastel = new THREE.PointLight(0xffc98a, 0.8, 12); luzPastel.position.set(0, 6.5, 0); pastel.add(luzPastel);
+colliders.push({ x: 0, z: 0, r: 3.9 });
+registrarOcultable(pastel, new THREE.Vector3(0, 2.8, 0), 3.9);
+
+/* ============ Buzón y tablero de mensajes ============ */
+const buzon = new THREE.Group(); buzon.position.set(-15, 0, 7); scene.add(buzon);
+add(buzon, new THREE.CylinderGeometry(0.15, 0.15, 1.5, 8), M(0xc9a27e), 0, 0.75, 0);
+add(buzon, new THREE.BoxGeometry(0.9, 0.7, 1.3), M(0xf4a9bf), 0, 1.75, 0);
+const techo = add(buzon, new THREE.CylinderGeometry(0.45, 0.45, 1.3, 16, 1, false, 0, Math.PI), M(0xf4a9bf), 0, 2.1, 0);
+techo.rotation.set(Math.PI / 2, Math.PI / 2, 0); techo.rotation.set(0, 0, Math.PI / 2); techo.rotation.y = Math.PI / 2;
+const bandera = add(buzon, new THREE.BoxGeometry(0.06, 0.5, 0.3), M(0xb79be8), 0.5, 2.1, 0.2);
+add(buzon, new THREE.CircleGeometry(0.28, 20), M(0xfff6ea), 0, 1.85, 0.66).rotation.y = 0;
+colliders.push({ x: -15, z: 7, r: 0.8 });
+
+const tablero = new THREE.Group(); tablero.position.set(-18, 0, 12); tablero.rotation.y = Math.PI * 0.75; scene.add(tablero);
+add(tablero, new THREE.CylinderGeometry(0.15, 0.15, 3.6, 8), M(0xc9a27e), -2.3, 1.8, 0);
+add(tablero, new THREE.CylinderGeometry(0.15, 0.15, 3.6, 8), M(0xc9a27e), 2.3, 1.8, 0);
+const tableroCara = add(tablero, new THREE.PlaneGeometry(4.6, 2.8), new THREE.MeshBasicMaterial(), 0, 2.4, 0.06, { cast: false });
+add(tablero, new THREE.BoxGeometry(4.8, 3.0, 0.1), M(0xd9b48f), 0, 2.4, 0);
+colliders.push({ x: -18 + Math.cos(Math.PI * 0.75) * 2.3, z: 12 - Math.sin(Math.PI * 0.75) * 2.3, r: 0.3 }, { x: -18 - Math.cos(Math.PI * 0.75) * 2.3, z: 12 + Math.sin(Math.PI * 0.75) * 2.3, r: 0.3 });
+
+function envolver(ctx, texto, maxW, maxLineas){
+  const lineas = []; let l = "";
+  for (let p of String(texto).replace(/\s+/g, " ").trim().split(" ")){
+    while (ctx.measureText(p).width > maxW){ // palabra más ancha que la línea: se parte
+      const cs = Array.from(p); let n = cs.length;
+      while (n > 1 && ctx.measureText(cs.slice(0, n).join("")).width > maxW) n--;
+      if (l){ lineas.push(l); l = ""; }
+      lineas.push(cs.slice(0, n).join("")); p = cs.slice(n).join("");
+    }
+    const t = l ? l + " " + p : p;
+    if (l && ctx.measureText(t).width > maxW){ lineas.push(l); l = p; } else l = t;
+  }
+  if (l) lineas.push(l);
+  if (lineas.length > maxLineas){ lineas.length = maxLineas; lineas[maxLineas - 1] = lineas[maxLineas - 1].replace(/.$/u, "…"); }
+  return lineas;
+}
+function pintarTablero(msjs){
+  const c = document.createElement("canvas"); c.width = 920; c.height = 560; const x = c.getContext("2d");
+  x.fillStyle = "#e9cfb2"; x.fillRect(0, 0, 920, 560);
+  x.fillStyle = "#b0688a"; x.font = "800 46px 'Baloo 2', sans-serif"; x.textAlign = "center"; x.fillText("Mensajes para " + CUMPLE + " 💌", 460, 58);
+  const cols = ["#fde2ea", "#e9defa", "#dcf3e7", "#fff3cf", "#dcedfa", "#fde2ea"];
+  const lista = msjs.slice(0, 6);
+  if (!lista.length){ x.fillStyle = "#7a6688"; x.font = "600 34px 'Baloo 2', sans-serif"; x.fillText("¡Sé la primera persona en dejar un mensaje!", 460, 300); }
+  lista.forEach((m, i) => {
+    const cx = 30 + (i % 3) * 295, cy = 90 + Math.floor(i / 3) * 230;
+    x.save(); x.translate(cx + 130, cy + 105); x.rotate(((i * 37) % 7 - 3) * 0.012); x.translate(-130, -105);
+    x.fillStyle = cols[i]; x.shadowColor = "rgba(0,0,0,.15)"; x.shadowBlur = 8; x.fillRect(0, 0, 265, 205); x.shadowBlur = 0;
+    x.textAlign = "left"; x.fillStyle = "#5b4a6b"; x.font = "600 25px 'Baloo 2', sans-serif";
+    envolver(x, String(m.texto || ""), 240, 5).forEach((l, j) => x.fillText(l, 13, 38 + j * 30));
+    x.font = "800 22px 'Baloo 2', sans-serif"; x.fillStyle = "#b0688a"; x.fillText("— " + String(m.nombre || "Alguien").slice(0, 18), 13, 190);
+    x.restore();
+  });
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  if (tableroCara.material.map) tableroCara.material.map.dispose();
+  tableroCara.material.map = t; tableroCara.material.needsUpdate = true;
+}
+
+/* ============ Laguito y farolitos ============ */
+const LAGO = { x: 15, z: 9 };
+const lago = add(scene, new THREE.CircleGeometry(4.2, 40), new THREE.MeshStandardMaterial({ color: 0x9fd4ea, roughness: 0.2 }), LAGO.x, 0.03, LAGO.z, { cast: false });
+lago.rotation.x = -Math.PI / 2;
+const borde = add(scene, new THREE.TorusGeometry(4.3, 0.3, 8, 40), M(0xe6dccf), LAGO.x, 0.05, LAGO.z);
+borde.rotation.x = Math.PI / 2;
+for (let i = 0; i < 5; i++){
+  const a = i * 1.3, r = rand(1, 3);
+  const n = add(scene, new THREE.CircleGeometry(0.5, 16, 0, TAU * 0.85), M(0x9fd59a), LAGO.x + Math.cos(a) * r, 0.06, LAGO.z + Math.sin(a) * r, { cast: false });
+  n.rotation.x = -Math.PI / 2; n.rotation.z = a;
+  if (i % 2 === 0) add(scene, new THREE.SphereGeometry(0.15, 8, 6), M(0xffc4d6), n.position.x, 0.15, n.position.z);
+}
+colliders.push({ x: LAGO.x, z: LAGO.z, r: 4.1 });
+// banca
+const banca = new THREE.Group(); banca.position.set(LAGO.x - 5.6, 0, LAGO.z + 3.6); banca.rotation.y = -0.9; scene.add(banca);
+add(banca, new THREE.BoxGeometry(2.4, 0.15, 0.7), M(0xe0b893), 0, 0.6, 0);
+add(banca, new THREE.BoxGeometry(2.4, 0.6, 0.12), M(0xe0b893), 0, 1.0, -0.32);
+[-1, 1].forEach(s => add(banca, new THREE.BoxGeometry(0.12, 0.6, 0.6), M(0xc9a27e), s * 1.05, 0.3, 0));
+const farolitos = [];
+function soltarFarolito(x, z, color){
+  const g = new THREE.Group(); g.position.set(x, 1.2, z);
+  add(g, new THREE.CylinderGeometry(0.32, 0.25, 0.6, 12), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.7, transparent: true, opacity: 0.92 }), 0, 0, 0, { cast: false });
+  add(g, new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe2a0 }), 0, -0.2, 0, { cast: false });
+  g.userData = { t: 0, dx: rand(-0.3, 0.3), dz: rand(-0.3, 0.3), fase: rand(0, TAU) };
+  scene.add(g); farolitos.push(g);
+  if (farolitos.length > 40){ const v = farolitos.shift(); scene.remove(v); }
+}
+
+/* ============ Mascotas ============ */
+function hacerMascota(tipo, color, color2){
+  const g = new THREE.Group(); const cuerpo = new THREE.Group(); g.add(cuerpo);
+  const mc = M(color), m2 = M(color2);
+  const b = add(cuerpo, new THREE.SphereGeometry(0.42, 14, 12), mc, 0, 0.5, 0); b.scale.set(0.9, 0.8, 1.25);
+  const cab = new THREE.Group(); cab.position.set(0, 0.85, 0.48); cuerpo.add(cab);
+  add(cab, new THREE.SphereGeometry(0.34, 14, 12), mc, 0, 0, 0);
+  const ojo = M(0x3b2f45);
+  add(cab, new THREE.SphereGeometry(0.045, 8, 6), ojo, -0.12, 0.05, 0.3, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.045, 8, 6), ojo, 0.12, 0.05, 0.3, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.05, 8, 6), M(0xf49ab0), 0, -0.05, 0.33, { cast: false });
+  if (tipo === "gato"){
+    [-1, 1].forEach(s => { const o = add(cab, new THREE.ConeGeometry(0.11, 0.24, 4), m2, s * 0.18, 0.3, 0); o.rotation.z = -s * 0.25; });
+    const cola = add(cuerpo, new THREE.CylinderGeometry(0.05, 0.06, 0.8, 6), m2, 0, 0.85, -0.55); cola.rotation.x = -0.5;
+    g.userData.cola = cola;
+  } else {
+    [-1, 1].forEach(s => { const o = add(cab, new THREE.SphereGeometry(0.12, 10, 8), m2, s * 0.3, 0.02, -0.02); o.scale.set(0.6, 1.4, 0.8); });
+    add(cab, new THREE.SphereGeometry(0.15, 10, 8), m2, 0, -0.08, 0.25).scale.set(1, 0.7, 1);
+    add(cab, new THREE.SphereGeometry(0.06, 8, 6), ojo, 0, -0.02, 0.4, { cast: false });
+    const cola = add(cuerpo, new THREE.SphereGeometry(0.1, 8, 6), m2, 0, 0.75, -0.55);
+    g.userData.cola = cola;
+  }
+  const patas = [];
+  [[-0.2, 0.3], [0.2, 0.3], [-0.2, -0.3], [0.2, -0.3]].forEach(([x, z]) => patas.push(add(cuerpo, new THREE.CylinderGeometry(0.08, 0.08, 0.3, 6), mc, x, 0.15, z)));
+  Object.assign(g.userData, { cuerpo, cab, patas });
+  return g;
+}
+const MASCOTAS_DEF = [
+  ["gato", "Mishi", 0xfff3e6, 0xf2c6a0, -8, 16], ["gato", "Luna", 0xd9d4e6, 0xb7aed0, 18, -8], ["gato", "Canela", 0xf6d2a8, 0xe6ad7a, -20, -4],
+  ["gato", "Nube", 0xffffff, 0xf2d0dc, 8, -17], ["perro", "Toby", 0xf2dcc0, 0xc9a27e, 20, 4], ["perro", "Maní", 0xfaf2e6, 0xd8b896, -12, -16],
+  ["perro", "Copito", 0xffffff, 0xe8e0d4, 4, 19]
+];
+const mascotas = MASCOTAS_DEF.map(([tipo, nombre, c1, c2, x, z]) => {
+  const g = hacerMascota(tipo, c1, c2); g.position.set(x, 0, z); scene.add(g);
+  const tag = etiqueta(nombre, 0.75); tag.position.y = 1.65; g.add(tag);
+  return { g, tipo, nombre, casa: { x, z }, obj: { x, z }, espera: rand(0, 3), acariciada: false, feliz: 0, rot: rand(0, TAU) };
+});
+
+/* ============ Regalos escondidos ============ */
+const REGALOS_POS = [[-28, -6], [12, -27], [27, 10], [-6, 28], [-24, 20]];
+const regalos = REGALOS_POS.map(([x, z], i) => {
+  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  const c = [0xf7b7c8, 0xcdb8f0, 0xb8e6d0, 0xfde3a7, 0xbfe0f5][i];
+  add(g, new THREE.BoxGeometry(0.8, 0.7, 0.8), M(c), 0, 0.35, 0);
+  add(g, new THREE.BoxGeometry(0.84, 0.72, 0.16), M(0xffffff), 0, 0.36, 0);
+  add(g, new THREE.BoxGeometry(0.16, 0.72, 0.84), M(0xffffff), 0, 0.36, 0);
+  [-1, 1].forEach(s => { const m = add(g, new THREE.TorusGeometry(0.14, 0.05, 6, 12), M(0xffffff), s * 0.13, 0.82, 0); m.rotation.y = Math.PI / 2; });
+  return { g, encontrado: false };
+});
+
+/* ============ Muñequitos ============ */
+const COLORES = ["#f7b7c8", "#cdb8f0", "#b8e6d0", "#bfe0f5", "#fde3a7", "#f9cfb0", "#e8e0d4", "#d8f0b8"];
+const OREJAS = { gato: "🐱 Gatito", perro: "🐶 Perrito", conejo: "🐰 Conejito", nada: "Ninguna" };
+const ACCESORIOS = { gorrito: "🥳 Gorrito", mono: "🎀 Moño", flor: "🌼 Flor", nada: "Nada" };
+
+function etiqueta(texto, escala = 1){
+  const c = document.createElement("canvas"); const x = c.getContext("2d"); const fs = 44;
+  x.font = `800 ${fs}px 'Baloo 2', sans-serif`; const w = Math.ceil(x.measureText(texto).width) + 40;
+  c.width = w; c.height = 70; x.font = `800 ${fs}px 'Baloo 2', sans-serif`;
+  x.fillStyle = "rgba(255,255,255,.88)"; x.beginPath(); x.roundRect ? x.roundRect(0, 0, w, 70, 35) : x.rect(0, 0, w, 70); x.fill();
+  x.fillStyle = "#5b4a6b"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(texto, w / 2, 38);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false }));
+  s.scale.set(w / 70 * 0.38 * escala, 0.38 * escala, 1); s.renderOrder = 5; return s;
+}
+function emojiSprite(e){
+  const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d");
+  x.font = "96px serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(e, 64, 72);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  s.scale.set(0.8, 0.8, 1); s.renderOrder = 6; return s;
+}
+
+function hacerMunequito({ nombre, color, orejas, accesorio }){
+  const g = new THREE.Group(); const inner = new THREE.Group(); g.add(inner);
+  const mc = M(color), blanco = M(0xffffff), tinta = M(0x3b2f45);
+  const cuerpo = add(inner, new THREE.CylinderGeometry(0.38, 0.46, 0.7, 18), mc, 0, 0.62, 0);
+  add(inner, new THREE.SphereGeometry(0.46, 18, 10, 0, TAU, Math.PI / 2, Math.PI / 2), mc, 0, 0.28, 0);
+  add(inner, new THREE.SphereGeometry(0.2, 12, 10), blanco, 0, 0.66, 0.33).scale.set(1, 1.1, 0.5); // pancita
+  const cab = new THREE.Group(); cab.position.y = 1.32; inner.add(cab);
+  add(cab, new THREE.SphereGeometry(0.5, 22, 18), M(0xfff1e6), 0, 0, 0);
+  add(cab, new THREE.SphereGeometry(0.52, 22, 12, 0, TAU, 0, Math.PI * 0.42), mc, 0, 0.02, -0.02); // pelito/capucha
+  add(cab, new THREE.SphereGeometry(0.065, 10, 8), tinta, -0.17, 0.0, 0.45, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.065, 10, 8), tinta, 0.17, 0.0, 0.45, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.02, 6, 6), blanco, -0.15, 0.03, 0.51, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.02, 6, 6), blanco, 0.19, 0.03, 0.51, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.08, 10, 8), M(0xf9b4c4), -0.3, -0.12, 0.36, { cast: false }).scale.set(1, 0.6, 0.4);
+  add(cab, new THREE.SphereGeometry(0.08, 10, 8), M(0xf9b4c4), 0.3, -0.12, 0.36, { cast: false }).scale.set(1, 0.6, 0.4);
+  const boca = add(cab, new THREE.TorusGeometry(0.06, 0.015, 6, 12, Math.PI), tinta, 0, -0.12, 0.47, { cast: false }); boca.rotation.z = Math.PI;
+  if (orejas === "gato") [-1, 1].forEach(s => { const o = add(cab, new THREE.ConeGeometry(0.16, 0.32, 4), mc, s * 0.3, 0.42, 0); o.rotation.z = -s * 0.35; add(cab, new THREE.ConeGeometry(0.08, 0.18, 4), M(0xf9c6d3), s * 0.3, 0.42, 0.05).rotation.z = -s * 0.35; });
+  if (orejas === "perro") [-1, 1].forEach(s => { const o = add(cab, new THREE.SphereGeometry(0.16, 12, 10), mc, s * 0.47, 0.05, 0); o.scale.set(0.5, 1.4, 0.8); o.rotation.z = s * 0.3; });
+  if (orejas === "conejo") [-1, 1].forEach(s => { const o = add(cab, new THREE.SphereGeometry(0.11, 12, 10), mc, s * 0.17, 0.6, 0); o.scale.set(0.8, 2.6, 0.6); o.rotation.z = -s * 0.15; });
+  if (accesorio === "gorrito"){ const h = add(cab, new THREE.ConeGeometry(0.2, 0.5, 16), M(0xcdb8f0), 0.12, 0.6, 0); h.rotation.z = -0.25; add(cab, new THREE.SphereGeometry(0.07, 8, 6), M(0xfff6ea), 0.18, 0.86, 0); }
+  if (accesorio === "mono"){ [-1, 1].forEach(s => { const l = add(cab, new THREE.ConeGeometry(0.12, 0.22, 10), M(0xf49ab0), 0.25 + s * 0.12, 0.38, 0.12); l.rotation.z = s * Math.PI / 2; }); add(cab, new THREE.SphereGeometry(0.06, 8, 6), M(0xf49ab0), 0.25, 0.38, 0.12); }
+  if (accesorio === "flor"){ for (let i = 0; i < 5; i++){ const a = i / 5 * TAU; add(cab, new THREE.SphereGeometry(0.07, 8, 6), M(0xffffff), -0.28 + Math.cos(a) * 0.09, 0.35 + Math.sin(a) * 0.09, 0.2); } add(cab, new THREE.SphereGeometry(0.06, 8, 6), M(0xfde3a7), -0.28, 0.35, 0.24); }
+  const brazoI = add(inner, new THREE.SphereGeometry(0.13, 10, 8), mc, -0.5, 0.72, 0);
+  const brazoD = add(inner, new THREE.SphereGeometry(0.13, 10, 8), mc, 0.5, 0.72, 0);
+  const pieI = add(inner, new THREE.SphereGeometry(0.15, 10, 8), M(0xfff6ea), -0.18, 0.1, 0.05); pieI.scale.set(1, 0.6, 1.3);
+  const pieD = add(inner, new THREE.SphereGeometry(0.15, 10, 8), M(0xfff6ea), 0.18, 0.1, 0.05); pieD.scale.set(1, 0.6, 1.3);
+  const tag = etiqueta(nombre); tag.position.y = 2.45; g.add(tag);
+  const sombra = add(g, new THREE.CircleGeometry(0.5, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.12, depthWrite: false }), 0, 0.02, 0, { cast: false, recv: false });
+  sombra.rotation.x = -Math.PI / 2;
+  return { g, inner, cab, brazoI, brazoD, pieI, pieD, sombra, emote: null, emoteHasta: 0, globo: null, globoHasta: 0 };
+}
+function animarMunequito(a, t, mov, dt){
+  const k = Math.min(1, dt * 10);
+  if (mov > 0.1){
+    const s = Math.sin(t * 11);
+    a.pieI.position.z = lerp(a.pieI.position.z, 0.05 + s * 0.22, k); a.pieD.position.z = lerp(a.pieD.position.z, 0.05 - s * 0.22, k);
+    a.brazoI.position.z = lerp(a.brazoI.position.z, -s * 0.18, k); a.brazoD.position.z = lerp(a.brazoD.position.z, s * 0.18, k);
+    a.inner.position.y = Math.abs(Math.sin(t * 11)) * 0.08; a.cab.rotation.z = Math.sin(t * 5.5) * 0.05;
+  } else {
+    a.pieI.position.z = lerp(a.pieI.position.z, 0.05, k); a.pieD.position.z = lerp(a.pieD.position.z, 0.05, k);
+    a.brazoI.position.z = lerp(a.brazoI.position.z, 0, k); a.brazoD.position.z = lerp(a.brazoD.position.z, 0, k);
+    a.inner.position.y = lerp(a.inner.position.y, Math.sin(t * 2) * 0.02, k); a.cab.rotation.z = Math.sin(t * 1.3) * 0.04;
+  }
+  const saludando = a.emote && a.emoteHasta > performance.now() && a.emoteTxt === "👋";
+  a.brazoD.position.y = lerp(a.brazoD.position.y, saludando ? 1.15 + Math.sin(t * 14) * 0.05 : 0.72, k);
+  a.brazoD.position.x = lerp(a.brazoD.position.x, saludando ? 0.55 + Math.sin(t * 14) * 0.08 : 0.5, k);
+  const ahora = performance.now();
+  if (a.globo){
+    const rest = a.globoHasta - ahora;
+    if (rest <= 0){ quitarSprite(a.g, a.globo); a.globo = null; }
+    else a.globo.material.opacity = Math.min(1, rest / 500);
+  }
+  if (a.emote){
+    const rest = a.emoteHasta - ahora;
+    if (rest <= 0){ quitarSprite(a.g, a.emote); a.emote = null; }
+    else { a.emote.position.y = (a.globo ? a.globo.position.y + a.globo.scale.y + 0.45 : 3.0) + (1 - rest / 2500) * 0.4; a.emote.material.opacity = Math.min(1, rest / 400); }
+  }
+}
+function quitarSprite(grupo, sp){ grupo.remove(sp); if (sp.material.map) sp.material.map.dispose(); sp.material.dispose(); }
+function quitarMunequito(a){
+  scene.remove(a.g);
+  a.g.traverse(o => { if (o.isSprite){ if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+}
+function mostrarEmote(a, e){
+  if (a.emote) quitarSprite(a.g, a.emote);
+  a.emote = emojiSprite(e); a.emoteTxt = e; a.emoteHasta = performance.now() + 2500; a.g.add(a.emote);
+}
+// Globo de texto sobre la cabeza: lo que alguien "dice" en la isla
+function globoSprite(texto){
+  const c = document.createElement("canvas"), x = c.getContext("2d"), fs = 40, pad = 24, cola = 16, fuente = `600 ${fs}px 'Baloo 2', sans-serif`;
+  x.font = fuente;
+  const lineas = envolver(x, texto, 460, 3);
+  const w = Math.ceil(Math.max(90, ...lineas.map(l => x.measureText(l).width))) + pad * 2, h = lineas.length * (fs + 8) + pad * 1.5 + cola;
+  c.width = w; c.height = h; x.font = fuente;
+  x.fillStyle = "rgba(255,255,255,.96)";
+  x.beginPath(); x.roundRect ? x.roundRect(0, 0, w, h - cola, 30) : x.rect(0, 0, w, h - cola); x.fill();
+  x.beginPath(); x.moveTo(w / 2 - 15, h - cola - 1); x.lineTo(w / 2, h); x.lineTo(w / 2 + 15, h - cola - 1); x.fill();
+  x.fillStyle = "#5b4a6b"; x.textAlign = "center"; x.textBaseline = "middle";
+  lineas.forEach((l, i) => x.fillText(l, w / 2, pad * 0.75 + (fs + 8) * (i + 0.5) + 2));
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.center.set(0.5, 0); sp.scale.set(w * 0.0062, h * 0.0062, 1); sp.renderOrder = 7; return sp;
+}
+function mostrarGlobo(a, texto){
+  if (a.globo) quitarSprite(a.g, a.globo);
+  a.globo = globoSprite(texto); a.globo.position.y = 2.78; a.globoTxt = texto; a.globoHasta = performance.now() + 6500; a.g.add(a.globo);
+}
+
+/* ============ Confeti y corazones ============ */
+const particulas = [];
+function confeti(x, y, z, n = 70, cols = [0xf7b7c8, 0xcdb8f0, 0xb8e6d0, 0xfde3a7, 0xbfe0f5]){
+  const geo = new THREE.PlaneGeometry(0.14, 0.09);
+  for (let i = 0; i < n; i++){
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: cols[i % cols.length], side: THREE.DoubleSide, transparent: true }));
+    m.position.set(x, y, z); m.userData = { v: new THREE.Vector3(rand(-4, 4), rand(4, 9), rand(-4, 4)), w: rand(-8, 8), vida: rand(2, 3.2) };
+    scene.add(m); particulas.push(m);
+  }
+}
+function corazones(obj){
+  for (let i = 0; i < 4; i++){
+    const s = emojiSprite("💗"); s.scale.set(0.45, 0.45, 1); s.position.copy(obj.position).add(new THREE.Vector3(rand(-0.4, 0.4), 1.3 + i * 0.2, rand(-0.4, 0.4)));
+    s.userData = { v: new THREE.Vector3(rand(-0.3, 0.3), rand(1, 1.6), rand(-0.3, 0.3)), w: 0, vida: 1.6, sprite: true }; scene.add(s); particulas.push(s);
+  }
+}
+
+/* ============ Sonido suave ============ */
+let actx = null, musicaOn = true, musicaTimer = null;
+function audio(){ if (!actx){ try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (actx && actx.state === "suspended") actx.resume(); return actx; }
+function tono(f, dur, cuando = 0, vol = 0.08, tipo = "sine"){
+  const a = audio(); if (!a) return; const t = a.currentTime + cuando;
+  const o = a.createOscillator(), g = a.createGain(); o.type = tipo; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+const campanita = () => { tono(880, 0.5, 0, 0.07); tono(1318, 0.7, 0.12, 0.06); };
+const ronroneo = () => { for (let i = 0; i < 3; i++) tono(70 + i * 3, 0.35, i * 0.3, 0.05, "triangle"); tono(990, 0.3, 0.1, 0.03); };
+function cumpleanosFeliz(){
+  // melodía tradicional (dominio público), suave como caja de música
+  const N = { G: 392, A: 440, B: 494, C: 523, D: 587, E: 659, F: 698, g: 784 };
+  const s = [["G", .75], ["G", .25], ["A", 1], ["G", 1], ["C", 1], ["B", 2], ["G", .75], ["G", .25], ["A", 1], ["G", 1], ["D", 1], ["C", 2],
+    ["G", .75], ["G", .25], ["g", 1], ["E", 1], ["C", 1], ["B", 1], ["A", 2], ["F", .75], ["F", .25], ["E", 1], ["C", 1], ["D", 1], ["C", 3]];
+  let t = 0; const b = 0.42; s.forEach(([n, d]) => { tono(N[n] * 2, d * b + 0.6, t, 0.05); tono(N[n], d * b + 0.4, t, 0.04, "triangle"); t += d * b; });
+}
+function musicaAmbiente(){
+  clearTimeout(musicaTimer); if (!musicaOn) return;
+  const esc = [523, 587, 659, 784, 880, 1047];
+  tono(esc[Math.floor(Math.random() * esc.length)], 2.4, 0, 0.022);
+  if (Math.random() < 0.4) tono(esc[Math.floor(Math.random() * 3)] / 2, 3, 0.3, 0.018);
+  musicaTimer = setTimeout(musicaAmbiente, rand(900, 2200));
+}
+
+/* ============ Estado del jugador ============ */
+const yo = { nombre: "", color: COLORES[0], orejas: "gato", accesorio: "gorrito", pos: new THREE.Vector3(0, 0, 23), vy: 0, rot: Math.PI, enSuelo: true, vel: 0, emote: "", emoteAt: 0, dicho: "", dichoAt: 0 };
+let miAv = null, jugando = false;
+let caricias = 0, encontrados = 0;
+try { const g = JSON.parse(localStorage.getItem("isla-andrew") || "{}"); Object.assign(yo, { nombre: g.nombre || "", color: g.color || yo.color, orejas: g.orejas || yo.orejas, accesorio: g.accesorio || yo.accesorio }); } catch (e) {}
+
+// Pantalla de inicio
+function opciones(cont, items, actual, alElegir, esColor){
+  cont.innerHTML = "";
+  items.forEach(([v, label]) => {
+    const b = document.createElement("button"); b.type = "button";
+    if (esColor){ b.className = "color"; b.style.background = v; b.title = v; } else { b.className = "chip"; b.textContent = label; }
+    if (v === actual) b.classList.add("sel");
+    b.onclick = () => { cont.querySelectorAll("button").forEach(x => x.classList.remove("sel")); b.classList.add("sel"); alElegir(v); };
+    cont.appendChild(b);
+  });
+}
+opciones($("#colores"), COLORES.map(c => [c, c]), yo.color, v => yo.color = v, true);
+opciones($("#orejas"), Object.entries(OREJAS), yo.orejas, v => yo.orejas = v);
+opciones($("#accesorios"), Object.entries(ACCESORIOS), yo.accesorio, v => yo.accesorio = v);
+$("#nombre").value = yo.nombre;
+if (esTactil) $("#ayuda").innerHTML = "Camina con el <b>círculo de la izquierda</b> y arrastra la pantalla para girar la cámara. Cuando estés cerca de algo aparece un botón para interactuar, y con 💬 puedes hablar.";
+
+$("#entrar").onclick = () => {
+  yo.nombre = recortar(($("#nombre").value || "").trim(), 18) || "Invitadx";
+  try { localStorage.setItem("isla-andrew", JSON.stringify({ nombre: yo.nombre, color: yo.color, orejas: yo.orejas, accesorio: yo.accesorio })); } catch (e) {}
+  miAv = hacerMunequito(yo); scene.add(miAv.g);
+  $("#inicio").classList.add("hidden");
+  ["#hud", "#mapa", "#barra", "#sonido"].forEach(s => $(s).classList.remove("hidden"));
+  if (esTactil){ $("#joy").classList.remove("hidden"); $("#saltar").classList.remove("hidden"); }
+  jugando = true; audio(); musicaAmbiente();
+  toast("¡Bienvenidx, " + yo.nombre + "! Busca los gatitos, perritos y regalos escondidos 🐾");
+  actualizarContadores();
+};
+$("#nombre").addEventListener("keydown", e => { if (e.key === "Enter") $("#entrar").click(); });
+
+let toastT = null;
+function toast(t, ms = 3200){ const el = $("#toast"); el.textContent = t; el.classList.add("ver"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("ver"), ms); }
+function actualizarContadores(){ $("#contadores").textContent = `🐾 ${caricias}/${mascotas.length} · 🎁 ${encontrados}/${regalos.length}`; }
+
+/* ============ Controles ============ */
+const teclas = {};
+let modalAbierto = false;
+addEventListener("keydown", e => {
+  if (!jugando || modalAbierto || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  teclas[e.code] = true;
+  if (e.code === "Space"){ saltar(); e.preventDefault(); }
+  if (e.code === "KeyE" || e.code === "Enter"){ accionar(); e.preventDefault(); }
+  if (e.code === "KeyM"){ abrirMensajes(); e.preventDefault(); }
+  if (e.code === "KeyT"){ abrirDecir(); e.preventDefault(); }
+  if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code)) emote(["👋", "💖", "🎉", "😊"][+e.code.slice(5) - 1]);
+});
+addEventListener("keyup", e => { teclas[e.code] = false; });
+addEventListener("keydown", e => { if (e.key === "Escape") cerrarPaneles(); });
+addEventListener("blur", () => { for (const k in teclas) teclas[k] = false; });
+
+let camYaw = 0, camDist = 10, arrastre = null;
+canvas.addEventListener("pointerdown", e => { arrastre = { id: e.pointerId, x: e.clientX }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", e => { if (arrastre && arrastre.id === e.pointerId){ camYaw -= (e.clientX - arrastre.x) * 0.006; arrastre.x = e.clientX; } });
+canvas.addEventListener("pointerup", () => arrastre = null);
+canvas.addEventListener("pointercancel", () => arrastre = null);
+canvas.addEventListener("wheel", e => { camDist = Math.max(5, Math.min(18, camDist + e.deltaY * 0.01)); e.preventDefault(); }, { passive: false });
+
+const joy = { x: 0, y: 0, id: null };
+const joyEl = $("#joy"), joyBola = joyEl.querySelector("i");
+function joyMover(e){
+  const r = joyEl.getBoundingClientRect(); let dx = e.clientX - (r.left + 60), dy = e.clientY - (r.top + 60);
+  const d = Math.hypot(dx, dy), max = 45; if (d > max){ dx *= max / d; dy *= max / d; }
+  joy.x = dx / max; joy.y = dy / max; joyBola.style.transform = `translate(${dx}px,${dy}px)`;
+}
+joyEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); joyMover(e); });
+joyEl.addEventListener("pointermove", e => { if (joy.id === e.pointerId) joyMover(e); });
+const joySoltar = () => { joy.id = null; joy.x = joy.y = 0; joyBola.style.transform = ""; };
+joyEl.addEventListener("pointerup", joySoltar); joyEl.addEventListener("pointercancel", joySoltar);
+$("#saltar").addEventListener("pointerdown", e => { e.preventDefault(); saltar(); });
+
+function saltar(){ if (yo.enSuelo){ yo.vy = 7.2; yo.enSuelo = false; } }
+function emote(e){ if (!miAv) return; mostrarEmote(miAv, e); yo.emote = e; yo.emoteAt = Date.now(); }
+// Hablar: un globo de texto que ven todos los que están en la isla
+function abrirDecir(){ if (!jugando) return; modalAbierto = true; for (const k in teclas) teclas[k] = false; $("#panelDecir").classList.remove("hidden"); const i = $("#decirTexto"); i.value = ""; i.focus(); } // el foco va en el mismo toque para que el celular abra el teclado
+function cerrarDecir(){ $("#panelDecir").classList.add("hidden"); modalAbierto = false; $("#decirTexto").blur(); }
+function decir(){
+  const txt = recortar($("#decirTexto").value.replace(/\s+/g, " ").trim(), 48);
+  cerrarDecir();
+  if (!txt || !miAv || Date.now() - yo.dichoAt < 1200) return;
+  yo.dicho = txt; yo.dichoAt = Date.now(); mostrarGlobo(miAv, txt);
+}
+function cerrarPaneles(){
+  if (!$("#panelDecir").classList.contains("hidden")) cerrarDecir();
+  else if (!$("#panelMensajes").classList.contains("hidden")) $("#cerrarMensajes").click();
+  else if (!$("#carta").classList.contains("hidden")) $("#cerrarCarta").click();
+}
+$("#abrirDecir").onclick = abrirDecir;
+$("#decirEnviar").onclick = decir;
+$("#decirTexto").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); decir(); } });
+$("#panelDecir").addEventListener("pointerdown", e => { if (e.target === e.currentTarget) cerrarDecir(); });
+document.querySelectorAll("[data-emote]").forEach(b => b.onclick = () => emote(b.dataset.emote));
+$("#sonido").onclick = () => { musicaOn = !musicaOn; $("#sonido").textContent = musicaOn ? "🎵" : "🔇"; if (musicaOn){ audio(); musicaAmbiente(); } else clearTimeout(musicaTimer); };
+
+/* ============ Interacciones ============ */
+let accionActual = null;
+$("#accion").onclick = () => accionar();
+function calcularAccion(){
+  const p = yo.pos; let mejor = null, dMejor = 1e9;
+  const prueba = (d, max, a) => { if (d < max && d < dMejor){ dMejor = d; mejor = a; } };
+  prueba(Math.hypot(p.x, p.z), 6.5, velasEncendidas ? { t: "🎂 Soplar las velas", f: soplarVelas } : null);
+  prueba(Math.hypot(p.x - buzon.position.x, p.z - buzon.position.z), 3.2, { t: "💌 Dejar un mensaje", f: abrirMensajes });
+  prueba(Math.hypot(p.x - tablero.position.x, p.z - tablero.position.z), 3.6, { t: "📋 Leer mensajes", f: abrirMensajes });
+  prueba(Math.hypot(p.x - LAGO.x, p.z - LAGO.z), 6.5, { t: "🏮 Soltar un farolito", f: farolito });
+  for (const m of mascotas) prueba(Math.hypot(p.x - m.g.position.x, p.z - m.g.position.z), 2.0, { t: (m.tipo === "gato" ? "🐱" : "🐶") + " Acariciar a " + m.nombre, f: () => acariciar(m) });
+  return mejor;
+}
+function accionar(){ if (accionActual && !modalAbierto) accionActual.f(); }
+
+function soplarVelas(remoto){
+  if (!velasEncendidas) return;
+  velasEncendidas = false; llamas.forEach(l => l.visible = false); luzPastel.intensity = 0;
+  confeti(0, 6, 0, 120); cumpleanosFeliz();
+  toast(remoto ? "¡Alguien sopló las velas! 🎂✨" : "✨ ¡Pide un deseo para Andrew! ✨", 4000);
+  if (!remoto) enviarEvento("velas", {});
+  setTimeout(() => { velasEncendidas = true; llamas.forEach(l => l.visible = true); luzPastel.intensity = 0.8; }, 15000);
+}
+const COLORES_FAROL = [0xffc4d6, 0xe0d0ff, 0xfff0b8, 0xc8f0dc, 0xcfe8ff];
+function farolito(){
+  const a = Math.atan2(yo.pos.z - LAGO.z, yo.pos.x - LAGO.x); const r = rand(1, 3);
+  const x = LAGO.x + Math.cos(a) * r, z = LAGO.z + Math.sin(a) * r, c = COLORES_FAROL[Math.floor(Math.random() * 5)];
+  soltarFarolito(x, z, c); campanita(); enviarEvento("farol", { x: +x.toFixed(1), z: +z.toFixed(1), c });
+}
+function acariciar(m){
+  m.feliz = 2.5; m.espera = 3; corazones(m.g); ronroneo();
+  if (!m.acariciada){ m.acariciada = true; caricias++; actualizarContadores();
+    toast(caricias === mascotas.length ? "¡Acariciaste a todas las mascotas! 🐾💖" : `${m.nombre} está feliz 💗`); }
+}
+
+/* ============ Mensajes (persistentes) ============ */
+let almacen = null, mensajes = [], mensajesLocales = [];
+function abrirMensajes(){ modalAbierto = true; for (const k in teclas) teclas[k] = false; $("#panelMensajes").classList.remove("hidden"); renderMensajes(); if (!esTactil) $("#texto").focus(); } // en celular no se abre el teclado solo, para poder leer
+$("#cerrarMensajes").onclick = () => { modalAbierto = false; $("#panelMensajes").classList.add("hidden"); };
+$("#abrirMensajes").onclick = abrirMensajes;
+function renderMensajes(){
+  const lista = $("#lista"); lista.innerHTML = "";
+  const todos = almacen ? mensajes : mensajesLocales;
+  if (!todos.length){ const d = document.createElement("div"); d.className = "nota"; d.textContent = "Todavía no hay mensajes. ¡Escribe el primero!"; lista.appendChild(d); }
+  todos.forEach(m => {
+    const d = document.createElement("div"); d.className = "msj"; if (/^#[0-9a-f]{6}$/i.test(m.color || "")) d.style.borderLeftColor = m.color;
+    const b = document.createElement("b"); b.textContent = String(m.nombre || "Alguien").slice(0, 18);
+    const s = document.createElement("span"); s.textContent = String(m.texto || "").slice(0, 400);
+    d.append(b, s); lista.appendChild(d);
+  });
+  $("#estadoMensajes").textContent = almacen ? "Los mensajes quedan guardados para " + CUMPLE + " 💗" : "Vista previa: aquí los mensajes todavía no se guardan.";
+}
+$("#enviar").onclick = async () => {
+  const texto = $("#texto").value.trim(); if (!texto) return;
+  const m = { nombre: yo.nombre, texto: recortar(texto, 400), color: yo.color, at: Date.now() };
+  $("#enviar").disabled = true;
+  try {
+    if (almacen) await almacen.guardar(m); else { mensajesLocales.unshift(m); pintarTablero(mensajesLocales); }
+    $("#texto").value = ""; campanita(); toast("¡Mensaje enviado! 💌"); renderMensajes();
+  } catch (e) {
+    $("#estadoMensajes").textContent = "No se pudo guardar el mensaje. Revisa tu conexión e inténtalo de nuevo.";
+  }
+  $("#enviar").disabled = false;
+};
+pintarTablero([]);
+
+/* ============ Multijugador ============ */
+// "red" es el canal en vivo (posiciones y eventos); "almacen" guarda los mensajes.
+let red = null; const remotos = new Map();
+let estadoRed = "local"; // local | conectando | ok | caida | permiso
+function pintarOnline(){
+  $("#online").textContent =
+    estadoRed === "ok" ? `👥 ${remotos.size + 1} en la isla` :
+    estadoRed === "conectando" ? "👥 Conectando…" :
+    estadoRed === "caida" ? "⚠️ Sin conexión…" :
+    estadoRed === "permiso" ? "⚠️ Sin permiso en la base" :
+    "👤 Vista previa";
+}
+function enviarEvento(tipo, datos){ if (red) red.evento(tipo, datos); }
+const num = (v, d = 0) => (typeof v === "number" && isFinite(v)) ? v : d;
+let mensajesCargados = false, ultimoMensajeAt = 0;
+function nuevosMensajes(lista){
+  mensajes = lista.slice(0, 200); pintarTablero(mensajes);
+  const m = mensajes[0], at = m ? num(m.at) : 0;
+  if (mensajesCargados && jugando && m && at > ultimoMensajeAt && m.nombre !== yo.nombre) toast(`💌 ${String(m.nombre || "Alguien").slice(0, 18)} dejó un mensaje para ${CUMPLE}`);
+  if (at > ultimoMensajeAt) ultimoMensajeAt = at;
+  mensajesCargados = true;
+  if (!$("#panelMensajes").classList.contains("hidden")) renderMensajes();
+}
+function eventoRemoto(tipo, d){
+  if (tipo === "velas") soplarVelas(true);
+  else if (tipo === "farol" && d && typeof d === "object"){
+    const x = Math.max(LAGO.x - 5, Math.min(LAGO.x + 5, num(d.x, LAGO.x))), z = Math.max(LAGO.z - 5, Math.min(LAGO.z + 5, num(d.z, LAGO.z)));
+    soltarFarolito(x, z, COLORES_FAROL.includes(d.c) ? d.c : COLORES_FAROL[0]);
+  }
+}
+// lista: [{ id, s }] con el estado de cada persona conectada (sin contarme a mí)
+function syncPeers(lista){
+  const vistos = new Set(), ahora = performance.now();
+  for (const { id, s } of lista){
+    if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.z)) continue;
+    vistos.add(id);
+    const color = /^#[0-9a-f]{6}$/i.test(s.c) ? s.c : COLORES[1];
+    const orejas = OREJAS[s.o] ? s.o : "nada", acc = ACCESORIOS[s.a] ? s.a : "nada";
+    const nombre = recortar(s.n || "Amigx", 18);
+    const clave = [nombre, color, orejas, acc].join("|");
+    const d0 = Math.hypot(s.x, s.z), k = d0 > RADIO_ISLA + 1 ? (RADIO_ISLA + 1) / d0 : 1;
+    const nx = s.x * k, nz = s.z * k, ny = Math.max(0, Math.min(5, num(s.y)));
+    let r = remotos.get(id);
+    if (r && r.clave !== clave){ quitarMunequito(r.av); remotos.delete(id); r = null; }
+    if (!r){
+      if (remotos.size >= 40) continue;
+      const av = hacerMunequito({ nombre, color, orejas, accesorio: acc });
+      av.g.position.set(nx, ny, nz); av.g.rotation.y = num(s.r); scene.add(av.g);
+      r = { av, clave, x: nx, y: ny, z: nz, r: num(s.r), et: s.et, dt: s.dt, vel: 6, mov: 0, tMuestra: ahora }; remotos.set(id, r);
+      if (jugando) toast(nombre + " llegó a la isla 👋", 2200);
+    }
+    if (nx !== r.x || ny !== r.y || nz !== r.z){
+      const T = Math.max(0.09, Math.min(0.5, (ahora - r.tMuestra) / 1000));
+      const q = r.av.g.position, dist = Math.hypot(nx - q.x, ny - q.y, nz - q.z);
+      r.vel = dist > 9 ? 1e6 : Math.max(2.5, dist / T); // muy lejos: aparece directo en su sitio
+      r.x = nx; r.y = ny; r.z = nz; r.tMuestra = ahora;
+    }
+    r.r = num(s.r);
+    if (s.et && s.et !== r.et){ r.et = s.et; if (["👋", "💖", "🎉", "😊"].includes(s.e)) mostrarEmote(r.av, s.e); }
+    if (s.dt && s.dt !== r.dt){ r.dt = s.dt; const txt = recortar(String(s.d || "").replace(/\s+/g, " ").trim(), 48); if (txt) mostrarGlobo(r.av, txt); }
+  }
+  for (const [id, r] of remotos) if (!vistos.has(id)){ quitarMunequito(r.av); remotos.delete(id); }
+  pintarOnline();
+}
+let ultimaPresencia = "", ultimoEnvio = 0;
+function publicarPresencia(ahora){
+  if (!red || !jugando || ahora - ultimoEnvio < red.intervalo) return;
+  const p = { n: yo.nombre, c: yo.color, o: yo.orejas, a: yo.accesorio, x: +yo.pos.x.toFixed(2), y: +yo.pos.y.toFixed(2), z: +yo.pos.z.toFixed(2), r: +yo.rot.toFixed(2), e: yo.emote, et: yo.emoteAt, d: yo.dicho, dt: yo.dichoAt };
+  const k = JSON.stringify(p);
+  if (k === ultimaPresencia && !(red.latido && ahora - ultimoEnvio > red.latido)) return;
+  ultimaPresencia = k; ultimoEnvio = ahora; red.estado(p);
+}
+
+// --- Enlace público: Firebase Realtime Database (cualquiera entra con el enlace) ---
+function cargarScript(src){ return new Promise((ok, mal) => { const el = document.createElement("script"); el.src = src; el.onload = ok; el.onerror = () => mal(new Error("no cargó " + src)); document.head.appendChild(el); }); }
+async function iniciarFirebase(){
+  const V = "10.14.1";
+  await cargarScript(`https://www.gstatic.com/firebasejs/${V}/firebase-app-compat.js`);
+  await cargarScript(`https://www.gstatic.com/firebasejs/${V}/firebase-database-compat.js`);
+  const fb = window.firebase, fdb = fb.initializeApp({ databaseURL: CONFIG.firebaseUrl }).database();
+  const TS = fb.database.ServerValue.TIMESTAMP;
+  const abc = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const miId = Array.from({ length: 12 }, () => abc[Math.floor(Math.random() * abc.length)]).join("");
+  const miRef = fdb.ref("jugadores/" + miId);
+  let conectado = false, completo = true, tCompleto = 0, ultimoS = "", ultimoE = "", ultimoX = "", desfase = 0;
+  const sinPermiso = () => { estadoRed = "permiso"; pintarOnline(); };
+  const fallo = e => { if (e && /permission/i.test(String(e.code || e.message || e))) sinPermiso(); };
+  estadoRed = "conectando"; pintarOnline();
+  setTimeout(() => { if (estadoRed === "conectando"){ estadoRed = "caida"; pintarOnline(); } }, 12000);
+
+  fdb.ref(".info/serverTimeOffset").on("value", snap => { desfase = +snap.val() || 0; });
+  fdb.ref(".info/connected").on("value", snap => {
+    conectado = snap.val() === true;
+    if (conectado){
+      miRef.onDisconnect().remove().catch(fallo); // al cerrar la página, el servidor borra mi muñequito
+      completo = true; ultimaPresencia = "";
+      if (estadoRed !== "permiso") estadoRed = "ok";
+    } else if (estadoRed === "ok") estadoRed = "caida";
+    pintarOnline();
+  });
+
+  // Personas en la isla
+  const estados = new Map(); let pendiente = false;
+  const refrescar = () => { if (pendiente) return; pendiente = true; requestAnimationFrame(() => { pendiente = false; syncPeers([...estados].map(([id, s]) => ({ id, s }))); }); };
+  const poner = snap => {
+    const id = snap.key, v = snap.val();
+    if (id === miId) return;
+    if (!v || typeof v !== "object" || !v.p || typeof v.s !== "string"){ if (estados.delete(id)) refrescar(); return; }
+    const [x, y, z, r] = v.s.split(",").map(Number);
+    let e = "", et = 0, d = "", dt = 0;
+    if (typeof v.e === "string"){ const i = v.e.lastIndexOf(","); e = v.e.slice(0, i); et = +v.e.slice(i + 1) || 0; }
+    if (typeof v.x === "string"){ const i = v.x.lastIndexOf("|"); d = v.x.slice(0, i); dt = +v.x.slice(i + 1) || 0; }
+    estados.set(id, { n: v.p.n, c: v.p.c, o: v.p.o, a: v.p.a, x, y, z, r, e, et, d, dt });
+    refrescar();
+  };
+  const jugadores = fdb.ref("jugadores");
+  jugadores.on("child_added", poner, sinPermiso);
+  jugadores.on("child_changed", poner);
+  jugadores.on("child_removed", snap => { if (estados.delete(snap.key)) refrescar(); });
+
+  // Eventos compartidos (velas, farolitos): cada tipo guarda solo el último
+  let vistos = null;
+  fdb.ref("eventos").on("value", snap => {
+    const v = snap.val() || {}, primera = vistos === null;
+    if (primera) vistos = {};
+    for (const tipo of Object.keys(v)){
+      const ev = v[tipo];
+      if (!ev || typeof ev.at !== "number" || vistos[tipo] === ev.at) continue;
+      vistos[tipo] = ev.at;
+      const d = typeof ev.d === "string" ? ev.d : "", i = d.indexOf("|");
+      if (primera || d.slice(0, i) === miId || Math.abs(Date.now() + desfase - ev.at) > 15000) continue;
+      let datos = null; try { datos = JSON.parse(d.slice(i + 1) || "null"); } catch (e) {}
+      eventoRemoto(tipo, datos);
+    }
+  }, sinPermiso);
+
+  // Mensajes guardados
+  fdb.ref("mensajes").limitToLast(200).on("value", snap => {
+    const lista = [];
+    snap.forEach(c => { const v = c.val(); if (v && typeof v.texto === "string") lista.push({ nombre: v.nombre, texto: v.texto, color: v.color, at: +v.at || 0 }); });
+    lista.sort((a, b) => b.at - a.at); nuevosMensajes(lista);
+  }, sinPermiso);
+  const conTiempo = (promesa, ms) => Promise.race([promesa, new Promise((_, no) => setTimeout(() => no(new Error("tiempo agotado")), ms))]);
+  almacen = { guardar: m => conectado
+    ? conTiempo(Promise.resolve(fdb.ref("mensajes").push({ nombre: m.nombre, texto: m.texto, color: m.color, at: TS })), 9000)
+    : Promise.reject(new Error("sin conexión")) };
+
+  red = {
+    // con más gente en la isla cada quien envía un poco menos seguido
+    get intervalo(){ const n = remotos.size + 1; return n <= 6 ? 140 : n <= 12 ? 200 : n <= 20 ? 280 : 400; },
+    latido: 30000,
+    estado(p){
+      if (!conectado) return;
+      const s = `${p.x},${p.y},${p.z},${p.r}`, e = p.e ? p.e + "," + p.et : "";
+      const x = (p.d && Date.now() - p.dt < 8000) ? p.d + "|" + p.dt : ""; // lo dicho solo viaja mientras es reciente
+      if (completo || Date.now() - tCompleto > 29000){
+        const todo = { p: { n: p.n, c: p.c, o: p.o, a: p.a }, s }; if (e) todo.e = e; if (x) todo.x = x;
+        completo = false; tCompleto = Date.now(); ultimoS = s; ultimoE = e; ultimoX = x;
+        miRef.set(todo).catch(fallo); return;
+      }
+      if (s !== ultimoS){ ultimoS = s; miRef.child("s").set(s).catch(fallo); }
+      if (e !== ultimoE){ ultimoE = e; miRef.child("e").set(e || null).catch(fallo); }
+      if (x !== ultimoX){ ultimoX = x; miRef.child("x").set(x || null).catch(fallo); }
+    },
+    evento(tipo, datos){ if (conectado) fdb.ref("eventos/" + tipo).set({ at: TS, d: (miId + "|" + JSON.stringify(datos || {})).slice(0, 200) }).catch(fallo); }
+  };
+  addEventListener("pagehide", () => { if (conectado) miRef.remove().catch(() => {}); });
+  addEventListener("pageshow", ev => { if (ev.persisted){ completo = true; ultimaPresencia = ""; } });
+}
+
+// --- Vista previa dentro de Claude (solo personas de la misma organización) ---
+async function iniciarClaude(){
+  try {
+    const db = await window.claude.use("db");
+    if (db){
+      almacen = { guardar: m => db.collection("mensajes").add(m) };
+      db.collection("mensajes").orderBy("at", "desc").limit(200).onSnapshot(snap => nuevosMensajes(snap.docs.map(d => d.data()).filter(Boolean)), () => {});
+    }
+  } catch (e) {}
+  try {
+    const room = await window.claude.use("room");
+    if (room){
+      red = { intervalo: 100, latido: 0, estado: p => room.presence(p).catch(() => {}), evento: (t, d) => room.emit(t, d).catch(() => {}) };
+      estadoRed = "ok"; pintarOnline();
+      room.onPeers(ch => syncPeers(ch.peers.filter(p => !p.sameTab && p.kind === "viewer").map(p => ({ id: p.peer, s: p.presence }))), () => {});
+      room.on("velas", m => { if (!m.sameTab) eventoRemoto("velas", m.data); });
+      room.on("farol", m => { if (!m.sameTab) eventoRemoto("farol", m.data); });
+    }
+  } catch (e) {}
+}
+(async () => {
+  pintarOnline();
+  if (CONFIG.firebaseUrl){
+    try { await iniciarFirebase(); return; }
+    catch (e) { console.warn("No se pudo iniciar Firebase:", e); estadoRed = "local"; pintarOnline(); }
+  }
+  if (window.claude && window.claude.use) await iniciarClaude();
+})();
+
+/* ============ Minimapa ============ */
+const mapa = $("#mapa"), mx = mapa.getContext("2d");
+function dibujarMapa(){
+  const W = 264, s = W / 2 / 34; mx.clearRect(0, 0, W, W);
+  mx.save(); mx.translate(W / 2, W / 2);
+  mx.fillStyle = "#fbe6c2"; mx.beginPath(); mx.arc(0, 0, 34 * s, 0, TAU); mx.fill();
+  mx.fillStyle = "#bfe6b4"; mx.beginPath(); mx.arc(0, 0, 32 * s, 0, TAU); mx.fill();
+  mx.fillStyle = "#9fd4ea"; mx.beginPath(); mx.arc(LAGO.x * s, LAGO.z * s, 4.2 * s, 0, TAU); mx.fill();
+  mx.font = "26px serif"; mx.textAlign = "center"; mx.textBaseline = "middle";
+  mx.fillText("🎂", 0, 0); mx.fillText("💌", buzon.position.x * s, buzon.position.z * s);
+  for (const m of mascotas){ mx.font = "18px serif"; mx.fillText("🐾", m.g.position.x * s, m.g.position.z * s); }
+  for (const [, r] of remotos){ mx.fillStyle = "#fff"; mx.beginPath(); mx.arc(r.av.g.position.x * s, r.av.g.position.z * s, 7, 0, TAU); mx.fill(); mx.fillStyle = r.clave.split("|")[1]; mx.beginPath(); mx.arc(r.av.g.position.x * s, r.av.g.position.z * s, 5, 0, TAU); mx.fill(); }
+  mx.translate(yo.pos.x * s, yo.pos.z * s); mx.rotate(-yo.rot + Math.PI);
+  mx.fillStyle = "#b0688a"; mx.beginPath(); mx.moveTo(0, -11); mx.lineTo(8, 8); mx.lineTo(-8, 8); mx.closePath(); mx.fill();
+  mx.restore();
+}
+
+/* ============ Calidad adaptable ============ */
+// Si el dispositivo va lento, baja la resolución y luego apaga las sombras.
+let calidad = 2, fpsT = 0, fpsN = 0, fpsEspera = 4;
+function medirRendimiento(dt){
+  if (calidad === 0 || document.hidden) return;
+  if (fpsEspera > 0){ fpsEspera -= dt; return; }
+  fpsT += dt; fpsN++;
+  if (fpsT < 2.5) return;
+  const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
+  if (fps >= 27) return;
+  calidad--; fpsEspera = 2;
+  if (calidad === 1){ renderer.setPixelRatio(1); resize(); }
+  else { sol.castShadow = false; renderer.shadowMap.enabled = false; scene.traverse(o => { if (o.material && !Array.isArray(o.material)) o.material.needsUpdate = true; }); }
+}
+
+/* ============ Bucle principal ============ */
+const reloj = new THREE.Clock(); let t = 0, frame = 0;
+const camPos = new THREE.Vector3(0, 6, 34), mira = new THREE.Vector3();
+function resolverColisiones(p, r = 0.45){
+  for (const c of colliders){
+    const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r + r;
+    if (d < min && d > 1e-4){ p.x = c.x + dx / d * min; p.z = c.z + dz / d * min; }
+  }
+  const d = Math.hypot(p.x, p.z); if (d > RADIO_ISLA){ p.x *= RADIO_ISLA / d; p.z *= RADIO_ISLA / d; }
+}
+function loop(){
+  requestAnimationFrame(loop);
+  const dt = Math.min(reloj.getDelta(), 0.1); t += dt; frame++;
+  // agua y nubes
+  agua.position.y = -0.7 + Math.sin(t * 0.8) * 0.05;
+  nubes.forEach(n => { n.position.x += n.userData.v * dt; if (n.position.x > 130) n.position.x = -130; });
+  llamas.forEach((l, i) => { l.scale.y = 1.6 + Math.sin(t * 12 + i) * 0.25; });
+  if (velasEncendidas) luzPastel.intensity = 0.75 + Math.sin(t * 9) * 0.08;
+  bandera.rotation.z = Math.sin(t * 2) * 0.1;
+  // regalos
+  regalos.forEach((r, i) => { if (!r.encontrado){ r.g.rotation.y = t * 0.8 + i; r.g.position.y = Math.abs(Math.sin(t * 2 + i)) * 0.15; } });
+  // farolitos
+  for (const f of farolitos){ const u = f.userData; u.t += dt; f.position.y += dt * 0.9; f.position.x += Math.sin(t + u.fase) * dt * 0.3 + u.dx * dt; f.position.z += u.dz * dt; }
+  // mascotas
+  for (const m of mascotas){
+    const g = m.g, u = g.userData; let mov = 0;
+    if (m.feliz > 0){ m.feliz -= dt; u.cuerpo.position.y = Math.abs(Math.sin(t * 9)) * 0.2; if (u.cola) u.cola.rotation.z = Math.sin(t * 20) * 0.6;
+      if (miAv){ const a = Math.atan2(yo.pos.x - g.position.x, yo.pos.z - g.position.z); m.rot = angLerp(m.rot, a, dt * 5); } }
+    else if (m.espera > 0){ m.espera -= dt; u.cuerpo.position.y = lerp(u.cuerpo.position.y, 0, dt * 8); if (u.cola) u.cola.rotation.z = Math.sin(t * 3) * 0.3; }
+    else {
+      const dx = m.obj.x - g.position.x, dz = m.obj.z - g.position.z, d = Math.hypot(dx, dz);
+      if (d < 0.3){ m.espera = rand(2, 6); const a = rand(0, TAU), r = rand(0, 5); m.obj = { x: m.casa.x + Math.cos(a) * r, z: m.casa.z + Math.sin(a) * r }; }
+      else { const v = 1.1; g.position.x += dx / d * v * dt; g.position.z += dz / d * v * dt; m.rot = angLerp(m.rot, Math.atan2(dx, dz), dt * 4); mov = 1; resolverColisiones(g.position, 0.4); }
+    }
+    g.rotation.y = m.rot;
+    u.patas.forEach((p, i) => p.position.y = 0.15 + (mov ? Math.max(0, Math.sin(t * 12 + i * Math.PI / 2)) * 0.08 : 0));
+  }
+  // jugador
+  if (jugando && miAv){
+    let ix = 0, iy = 0;
+    if (!modalAbierto){
+      if (teclas.KeyW || teclas.ArrowUp) iy += 1; if (teclas.KeyS || teclas.ArrowDown) iy -= 1;
+      if (teclas.KeyD || teclas.ArrowRight) ix += 1; if (teclas.KeyA || teclas.ArrowLeft) ix -= 1;
+      ix += joy.x; iy -= joy.y;
+    }
+    const mag = Math.min(1, Math.hypot(ix, iy));
+    if (mag > 0.08){
+      const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = Math.cos(camYaw), rz = -Math.sin(camYaw);
+      let mx2 = fx * iy + rx * ix, mz = fz * iy + rz * ix; const l = Math.hypot(mx2, mz) || 1; mx2 /= l; mz /= l;
+      const vel = 6 * mag; yo.pos.x += mx2 * vel * dt; yo.pos.z += mz * vel * dt;
+      yo.rot = angLerp(yo.rot, Math.atan2(mx2, mz), Math.min(1, dt * 12));
+      yo.vel = mag;
+    } else yo.vel = 0;
+    yo.vy -= 20 * dt; yo.pos.y += yo.vy * dt;
+    if (yo.pos.y <= 0){ yo.pos.y = 0; yo.vy = 0; yo.enSuelo = true; }
+    resolverColisiones(yo.pos);
+    miAv.g.position.copy(yo.pos); miAv.g.rotation.y = yo.rot;
+    miAv.sombra.position.y = 0.02 - yo.pos.y; miAv.sombra.scale.setScalar(Math.max(0.4, 1 - yo.pos.y * 0.25));
+    animarMunequito(miAv, t, yo.enSuelo ? yo.vel : 0, dt);
+    // regalos
+    for (let i = 0; i < regalos.length; i++){
+      const r = regalos[i]; if (r.encontrado) continue;
+      if (Math.hypot(yo.pos.x - r.g.position.x, yo.pos.z - r.g.position.z) < 1.4){
+        r.encontrado = true; scene.remove(r.g); encontrados++; actualizarContadores(); campanita();
+        confeti(r.g.position.x, 1, r.g.position.z, 40);
+        if (encontrados === regalos.length){ setTimeout(() => { $("#cartaTexto").textContent = FRASES_REGALOS.join("\n\n"); $("#carta").classList.remove("hidden"); modalAbierto = true; }, 900); }
+        else toast(`🎁 "${FRASES_REGALOS[encontrados - 1]}"`, 5000);
+      }
+    }
+    // botón de acción
+    const a = calcularAccion();
+    if ((a && a.t) !== (accionActual && accionActual.t)){ accionActual = a; $("#accion").classList.toggle("hidden", !a); if (a) $("#accion").textContent = a.t + (esTactil ? "" : "  (E)"); }
+    publicarPresencia(performance.now());
+  }
+  // remotos
+  for (const [, r] of remotos){
+    // cada muñequito avanza a velocidad constante hacia su última posición conocida,
+    // calculada para llegar justo cuando debería entrar la siguiente actualización
+    const g = r.av.g, q = g.position;
+    const dx = r.x - q.x, dy = r.y - q.y, dz = r.z - q.z, d = Math.hypot(dx, dy, dz);
+    let paso = 0;
+    if (d > 1e-4){ paso = Math.min(d, r.vel * dt); q.x += dx / d * paso; q.y += dy / d * paso; q.z += dz / d * paso; }
+    g.rotation.y = angLerp(g.rotation.y, r.r, Math.min(1, dt * 10));
+    r.av.sombra.position.y = 0.02 - q.y;
+    const caminando = q.y < 0.05 && paso / Math.max(dt, 1e-3) > 0.8;
+    r.mov = lerp(r.mov, caminando ? 1 : 0, Math.min(1, dt * 14));
+    animarMunequito(r.av, t, r.mov > 0.5 ? 1 : 0, dt);
+  }
+  // partículas
+  for (let i = particulas.length - 1; i >= 0; i--){
+    const p = particulas[i], u = p.userData; u.vida -= dt;
+    if (!u.sprite) u.v.y -= 9 * dt; p.position.addScaledVector(u.v, dt);
+    if (!u.sprite){ p.rotation.x += u.w * dt; p.rotation.y += u.w * dt; if (p.position.y < 0.05){ p.position.y = 0.05; u.v.set(0, 0, 0); } }
+    p.material.opacity = Math.min(1, u.vida);
+    if (u.vida <= 0){ scene.remove(p); p.material.dispose(); particulas.splice(i, 1); }
+  }
+  // cámara
+  const foco = miAv ? yo.pos : new THREE.Vector3(0, 0, 0);
+  const yaw = jugando ? camYaw : t * 0.12, dist = jugando ? camDist : 26;
+  const objetivo = new THREE.Vector3(foco.x + Math.sin(yaw) * dist, foco.y + (jugando ? dist * 0.42 : 14), foco.z + Math.cos(yaw) * dist);
+  camPos.lerp(objetivo, Math.min(1, dt * 5));
+  camera.position.copy(camPos);
+  mira.lerp(new THREE.Vector3(foco.x, foco.y + 1.2, foco.z), Math.min(1, dt * 8));
+  camera.lookAt(mira);
+  actualizarOcultables(dt, camera.position, mira);
+  if (jugando && frame % 6 === 0) dibujarMapa();
+  renderer.render(scene, camera);
+  medirRendimiento(dt);
+}
+$("#cerrarCarta").onclick = () => { $("#carta").classList.add("hidden"); modalAbierto = false; confeti(yo.pos.x, 2, yo.pos.z, 100); };
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { pintarLetrero(); pintarTablero(almacen ? mensajes : mensajesLocales); mascotas.forEach(m => { const v = m.g.children.find(c => c.isSprite); if (v){ m.g.remove(v); const tag = etiqueta(m.nombre, 0.75); tag.position.y = 1.65; m.g.add(tag); } }); });
+loop();
+</script>
+</body>
+</html>

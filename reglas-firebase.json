@@ -1,0 +1,45 @@
+{
+  "rules": {
+    "jugadores": {
+      ".read": true,
+      "$id": {
+        ".write": "$id.length <= 24",
+        ".validate": "newData.hasChildren()",
+        "p": {
+          ".validate": "newData.hasChildren(['n'])",
+          "n": { ".validate": "newData.isString() && newData.val().length <= 24" },
+          "c": { ".validate": "newData.isString() && newData.val().length <= 9" },
+          "o": { ".validate": "newData.isString() && newData.val().length <= 12" },
+          "a": { ".validate": "newData.isString() && newData.val().length <= 12" },
+          "$otro": { ".validate": false }
+        },
+        "s": { ".validate": "newData.isString() && newData.val().length <= 48" },
+        "e": { ".validate": "newData.isString() && newData.val().length <= 32" },
+        "x": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "$otro": { ".validate": false }
+      }
+    },
+    "eventos": {
+      ".read": true,
+      "$tipo": {
+        ".write": "$tipo.length <= 20",
+        ".validate": "newData.hasChildren(['at'])",
+        "at": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "d": { ".validate": "newData.isString() && newData.val().length <= 200" },
+        "$otro": { ".validate": false }
+      }
+    },
+    "mensajes": {
+      ".read": true,
+      "$id": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['nombre', 'texto', 'at'])",
+        "nombre": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24" },
+        "texto": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500" },
+        "color": { ".validate": "newData.isString() && newData.val().length <= 9" },
+        "at": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "$otro": { ".validate": false }
+      }
+    }
+  }
+}
