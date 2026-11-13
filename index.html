@@ -65,6 +65,8 @@
   #foto{right:58px} #cielo{right:104px}
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30;transition:opacity .5s}
   #flash.ya{opacity:.85;transition:none}
+  #velo{position:fixed;inset:0;background:#1f1b33;opacity:0;pointer-events:none;z-index:29;transition:opacity .3s}
+  #velo.on{opacity:1}
   /* Panel de mensajes / carta */
   .modal{position:fixed;inset:0;background:rgba(90,70,110,.35);display:flex;align-items:center;justify-content:center;z-index:15;padding:14px}
   .modal .tarjeta{max-height:88vh;display:flex;flex-direction:column;text-align:left;background:rgba(255,255,255,.96)}
@@ -105,7 +107,7 @@
   /* Celulares en horizontal: poca altura */
   @media (max-height:480px){
     .pill.titulo{display:none}
-    #toast{top:10px;max-width:calc(100vw - 350px);font-size:14.5px;padding:7px 14px}
+    #toast{top:10px;max-width:calc(100vw - 440px);font-size:14.5px;padding:7px 14px}
   }
 </style>
 </head>
@@ -139,6 +141,7 @@
 <button id="foto" class="redondo hidden" title="Tomar una foto (F)">📸</button>
 <button id="cielo" class="redondo hidden" title="Día y noche">🌗</button>
 <div id="flash"></div>
+<div id="velo"></div>
 <button id="accion" class="hidden"></button>
 <div id="barra" class="hidden">
   <button class="redondo" data-emote="👋" title="Saludar (1)">👋</button>
@@ -178,7 +181,7 @@
 
 <div id="carta" class="modal hidden">
   <div class="tarjeta">
-    <h2>🎁 ¡Encontraste todos los regalos!</h2>
+    <h2 id="cartaTitulo">🎁 ¡Encontraste todos los regalos!</h2>
     <p id="cartaTexto"></p>
     <button class="grande" id="cerrarCarta">Seguir paseando</button>
   </div>
@@ -198,6 +201,8 @@ const FRASES_REGALOS = [
   "Ojalá este año te traiga muchos gatitos, perritos y días bonitos.",
   "¡Te queremos muchísimo! Feliz cumpleaños 💖"
 ];
+/* Lo que dice el cofre escondido al fondo de la cueva */
+const TESORO_CUEVA = "Llegaste hasta el fondo de la cueva, donde casi nadie llega.\n\nAquí está guardado lo más valioso de la isla: todos los buenos deseos de la gente que te quiere. Son tuyos, llévatelos todos.\n\nFeliz cumpleaños, " + CUMPLE + " 💎";
 
 if (!window.THREE) {
   document.body.innerHTML = '<p style="padding:30px;font-size:18px">No se pudo cargar el 3D. Revisa tu conexión y recarga la página 💗</p>';
@@ -245,10 +250,10 @@ let cieloMat;
 }
 const hemi = new THREE.HemisphereLight(0xfff4fb, 0xb9dcc0, 0.5); scene.add(hemi);
 const sol = new THREE.DirectionalLight(0xfff0e0, 0.5);
-sol.position.set(25, 45, 18);
+sol.position.set(25, 45, 5); sol.target.position.set(0, 0, -13); scene.add(sol.target); // centrado entre la isla y el claro del norte
 sol.castShadow = true;
 sol.shadow.mapSize.set(esTactil ? 1024 : 2048, esTactil ? 1024 : 2048);
-Object.assign(sol.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40, near: 1, far: 120 });
+Object.assign(sol.shadow.camera, { left: -52, right: 52, top: 52, bottom: -52, near: 1, far: 130 });
 sol.shadow.bias = -0.0005;
 scene.add(sol);
 
@@ -566,6 +571,7 @@ function arbol(x, z, s, tipo, rnd){
   while (arboles.length < 56 && intentos++ < 5000){
     const a = rnd() * TAU, r = 15.6 + Math.sqrt(rnd()) * 14.6, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (Math.abs(x) < 6 && z > 11) continue; // la entrada queda libre
+    if (Math.abs(x) < 4 && z < -12) continue; // y el camino al claro del norte
     if (CLAROS.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr)) continue;
     if (arboles.some(p => Math.hypot(x - p.x, z - p.z) < 3.3)) continue;
     const u = rnd();
@@ -576,19 +582,20 @@ function arbol(x, z, s, tipo, rnd){
 function lugarLibre(rnd, rMin, rMax){
   for (let k = 0; k < 60; k++){
     const a = rnd() * TAU, r = rMin + Math.sqrt(rnd()) * (rMax - rMin), x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (Math.abs(x) < 3.2 && z > 11 && z < 28) continue;
+    if (Math.abs(x) < 3.2 && ((z > 11 && z < 28) || z < -12)) continue;
     if (CLAROS.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr * 0.62)) continue;
     return [x, z];
   }
   return [0, -20];
 }
 function instancias(n, geo, colores, rnd, poner, opts = {}){
-  const inst = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.9, flatShading: true }, opts.mat)), n), d = new THREE.Object3D(), c = new THREE.Color();
+  const mat = opts.basico ? new THREE.MeshBasicMaterial() : new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.9, flatShading: true }, opts.mat));
+  const inst = new THREE.InstancedMesh(geo, mat, n), d = new THREE.Object3D(), c = new THREE.Color();
   for (let i = 0; i < n; i++){
     d.position.set(0, 0, 0); d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); poner(d, i); d.updateMatrix(); inst.setMatrixAt(i, d.matrix);
     inst.setColorAt(i, c.setHex(colores[Math.floor(rnd() * colores.length)]));
   }
-  inst.castShadow = !!opts.sombra; inst.receiveShadow = true; inst.frustumCulled = false; scene.add(inst); return inst;
+  inst.castShadow = !!opts.sombra; inst.receiveShadow = true; inst.frustumCulled = false; (opts.padre || scene).add(inst); return inst;
 }
 {
   const rnd = seeded(101);
@@ -683,11 +690,11 @@ const texBrillo = (() => {
   g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.35, "rgba(255,255,255,.6)"); g.addColorStop(1, "rgba(255,255,255,0)");
   x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
 })();
-function puntos(n, poner, mat){
+function puntos(n, poner, mat, padre = scene){
   const pos = new Float32Array(n * 3); for (let i = 0; i < n; i++){ const p = poner(i); pos[i * 3] = p[0]; pos[i * 3 + 1] = p[1]; pos[i * 3 + 2] = p[2]; }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const pts = new THREE.Points(geo, new THREE.PointsMaterial(Object.assign({ map: texBrillo, transparent: true, depthWrite: false }, mat)));
-  pts.frustumCulled = false; scene.add(pts); return pts;
+  pts.frustumCulled = false; padre.add(pts); return pts;
 }
 const estrellas = puntos(240, () => { const a = rand(0, TAU), h = rand(0.12, 0.95), r = Math.sqrt(1 - h * h); return [Math.cos(a) * r * 185, h * 185, Math.sin(a) * r * 185]; },
   { color: 0xffffff, size: 3.2, sizeAttenuation: false, fog: false, opacity: 0 });
@@ -711,6 +718,7 @@ const mariposas = [];
 const paleta = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, new THREE.Color(v)]));
 const DIA = paleta({ top: 0xb9d8f2, mid: 0xf3dcef, bot: 0xfde7d6, niebla: 0xf3e2ee, hemiC: 0xfff4fb, hemiS: 0xb9dcc0, sol: 0xfff0e0, agua: 0xa9dcef });
 const NOCHE = paleta({ top: 0x40427e, mid: 0x9484c0, bot: 0xeeb4c8, niebla: 0x9a8ec2, hemiC: 0xb4b8f4, hemiS: 0x7484a8, sol: 0xb0b8ff, agua: 0x7088c4 });
+const EN_CUEVA = paleta({ niebla: 0x1f1b33, hemiC: 0x9c9ce0, hemiS: 0x4c4670 });
 let modoCielo = "auto", noche = -1;
 function aplicarCielo(dt){
   let obj;
@@ -719,17 +727,20 @@ function aplicarCielo(dt){
     obj = sm(0.56, 0.66) - sm(0.92, 1); // cada 8 minutos: unos 5 de día y 3 de noche
   } else obj = modoCielo === "noche" ? 1 : 0;
   const n = noche < 0 ? obj : Math.abs(noche - obj) < 0.003 ? obj : lerp(noche, obj, Math.min(1, dt * 1.2));
-  if (n === noche) return;
-  if (jugando && modoCielo === "auto" && noche >= 0){
+  const cObj = enCueva ? 1 : 0, c = Math.abs(cuevaF - cObj) < 0.01 ? cObj : lerp(cuevaF, cObj, Math.min(1, dt * 3.5));
+  if (n === noche && c === cuevaF) return;
+  cuevaF = c;
+  if (jugando && modoCielo === "auto" && noche >= 0 && !enCueva){
     if (noche < 0.5 && n >= 0.5) toast("🌙 Anochece en la isla. Mira las luciérnagas ✨", 4000);
     if (noche >= 0.5 && n < 0.5) toast("🌤️ Amanece en la isla", 3000);
   }
   noche = n;
   const u = cieloMat.uniforms;
   u.top.value.copy(DIA.top).lerp(NOCHE.top, n); u.mid.value.copy(DIA.mid).lerp(NOCHE.mid, n); u.bot.value.copy(DIA.bot).lerp(NOCHE.bot, n);
-  scene.fog.color.copy(DIA.niebla).lerp(NOCHE.niebla, n);
-  hemi.color.copy(DIA.hemiC).lerp(NOCHE.hemiC, n); hemi.groundColor.copy(DIA.hemiS).lerp(NOCHE.hemiS, n); hemi.intensity = lerp(0.5, 0.36, n);
-  sol.color.copy(DIA.sol).lerp(NOCHE.sol, n); sol.intensity = lerp(0.5, 0.2, n);
+  scene.fog.color.copy(DIA.niebla).lerp(NOCHE.niebla, n).lerp(EN_CUEVA.niebla, c); scene.fog.near = lerp(55, 10, c); scene.fog.far = lerp(130, 64, c);
+  hemi.color.copy(DIA.hemiC).lerp(NOCHE.hemiC, n).lerp(EN_CUEVA.hemiC, c); hemi.groundColor.copy(DIA.hemiS).lerp(NOCHE.hemiS, n).lerp(EN_CUEVA.hemiS, c); hemi.intensity = lerp(lerp(0.5, 0.36, n), 0.5, c);
+  sol.color.copy(DIA.sol).lerp(NOCHE.sol, n); sol.intensity = lerp(lerp(0.5, 0.2, n), 0.04, c);
+  luzCueva.intensity = c * 1.2; cuevaG.visible = c > 0.01;
   agua.material.color.copy(DIA.agua).lerp(NOCHE.agua, n);
   estrellas.material.opacity = n * 0.95; estrellas.visible = n > 0.01;
   luna.material.opacity = n; luna.visible = n > 0.01;
@@ -758,6 +769,142 @@ function lanzarFuegos(remoto){
   ultimosFuegos = Date.now();
   for (let k = 0; k < 6; k++) setTimeout(() => estallido(COHETES.x + rand(-6, 6), rand(8, 13), COHETES.z + rand(-6, 6), COLORES_FUEGO[Math.floor(Math.random() * COLORES_FUEGO.length)]), 250 + k * 480);
 }
+
+/* ============ Zona nueva: el claro del norte y la cueva ============ */
+// Por dónde se puede caminar: círculos unidos. La cueva queda lejos, en su propio rincón del mundo.
+const LOBULO = { x: 0, z: -42, r: 17 }, COLINA = { x: 0, z: -52 }, CUEVA = { x: 0, z: 240 }, CAMPO = { x: 0, z: -38, r: 7.5 };
+const ZONAS = { isla: [[0, 0, RADIO_ISLA], [LOBULO.x, LOBULO.z, LOBULO.r]], cueva: [] };
+const enLaCueva = z => z > 150;
+function limitar(p){
+  const zona = enLaCueva(p.z) ? ZONAS.cueva : ZONAS.isla; let mejor = null, dm = 1e9;
+  for (const c of zona){ const d = Math.hypot(p.x - c[0], p.z - c[1]) - c[2]; if (d <= 0) return; if (d < dm){ dm = d; mejor = c; } }
+  const d = Math.hypot(p.x - mejor[0], p.z - mejor[1]) || 1; p.x = mejor[0] + (p.x - mejor[0]) / d * mejor[2]; p.z = mejor[1] + (p.z - mejor[1]) / d * mejor[2];
+}
+add(scene, new THREE.CylinderGeometry(21, 23, 1.2, 56), M(0xf3d9a8), LOBULO.x, -0.85, LOBULO.z, { cast: false });
+add(scene, new THREE.CylinderGeometry(18.6, 20, 1.4, 56), M(0x8fcd8e), LOBULO.x, -0.7, LOBULO.z, { cast: false });
+for (let i = 0; i < 10; i++) add(scene, new THREE.CylinderGeometry(0.75, 0.75, 0.08, 14), caminoMat, Math.sin(i * 2.3) * 0.5, 0.01, -14.6 - i * 1.65, { cast: false }).scale.z = 0.8;
+{
+  const rnd = seeded(311); let n = 0, intentos = 0; const puestos = [];
+  while (n < 13 && intentos++ < 3000){
+    const a = rnd() * TAU, r = Math.sqrt(rnd()) * 16.4, x = LOBULO.x + Math.cos(a) * r, z = LOBULO.z + Math.sin(a) * r;
+    if (Math.hypot(x, z) < 32.3 || Math.abs(x) < 3.2 || Math.hypot(x - CAMPO.x, z - CAMPO.z) < 9.6 || Math.hypot(x - COLINA.x, z - COLINA.z) < 8.4) continue;
+    if (puestos.some(p => Math.hypot(x - p[0], z - p[1]) < 3.2)) continue;
+    puestos.push([x, z]); n++; const u = rnd();
+    arbol(x, z, 0.85 + rnd() * 0.6, u < 0.6 ? "pino" : u < 0.85 ? "hoja" : "flor", rnd);
+  }
+  instancias(110, new THREE.ConeGeometry(0.1, 0.45, 4), [0x6cb878, 0x84ca8a, 0x64b084], rnd, d => {
+    const a = rnd() * TAU, r = Math.sqrt(rnd()) * 17, s = 0.7 + rnd() * 0.9; d.position.set(LOBULO.x + Math.cos(a) * r, 0.2 * s, LOBULO.z + Math.sin(a) * r); d.scale.setScalar(s);
+  });
+  instancias(70, new THREE.SphereGeometry(0.13, 8, 6), [0xffc4d6, 0xffffff, 0xd9c6ff, 0xfff0a8, 0xbfe3ff], rnd, d => {
+    const a = rnd() * TAU, r = Math.sqrt(rnd()) * 16.5; d.position.set(LOBULO.x + Math.cos(a) * r, 0.08, LOBULO.z + Math.sin(a) * r); d.scale.set(1, 0.55, 1);
+  }, { mat: { flatShading: false } });
+}
+// La colina de piedra con la boca de la cueva
+const colina = new THREE.Group(); colina.position.set(COLINA.x, 0, COLINA.z); scene.add(colina);
+{
+  const rnd = seeded(77), piezas = [], grises = [0xb9b2c8, 0xa9a3bc, 0xc6c0d2, 0x9e98b4];
+  [[0, 2.6, 0, 5.2], [-3.7, 1.6, 1.3, 3.4], [3.9, 1.7, 0.9, 3.6], [-2, 4.7, -1, 3], [2.2, 5, -0.6, 2.8], [0, 6.3, -1.4, 2.4], [-4.6, 1, -2.6, 3], [4.6, 1.1, -2.8, 3.1], [0, 1.5, -4, 3.6]]
+    .forEach(([x, y, z, r], i) => piezas.push([new THREE.IcosahedronGeometry(r, 1), grises[i % 4], [x, y, z], [1, 0.86, 1], [rnd() * 3, rnd() * 3, 0]]));
+  [[0, 8.1, -1.4, 1.5], [-2.4, 6.9, -1, 1.3], [2.8, 7, -0.4, 1.2]].forEach(([x, y, z, r]) => piezas.push([new THREE.IcosahedronGeometry(r, 1), 0x7cc48e, [x, y, z], [1.2, 0.6, 1.2], [rnd(), rnd(), 0]]));
+  for (let i = 0; i <= 8; i++){ const a = i / 8 * Math.PI; piezas.push([new THREE.DodecahedronGeometry(0.62, 0), grises[(i + 1) % 4], [Math.cos(a) * 2.05, 1.1 + Math.sin(a) * 2.35, 5.15], 1, [rnd() * 3, rnd() * 3, 0]]); }
+  const m = new THREE.Mesh(fundir(piezas), matArbol); m.castShadow = m.receiveShadow = true; colina.add(m);
+  add(colina, new THREE.CircleGeometry(1.9, 24), new THREE.MeshBasicMaterial({ color: 0x2b2338 }), 0, 1.15, 5.32, { cast: false, recv: false }).scale.y = 1.25;
+  colliders.push({ x: COLINA.x, z: COLINA.z, r: 6.2 });
+  registrarOcultable(colina, new THREE.Vector3(COLINA.x, 3.2, COLINA.z), 6.6);
+}
+const BOCA = { x: COLINA.x, z: COLINA.z + 6.6 };
+
+// La cueva por dentro
+const cuevaG = new THREE.Group(); cuevaG.position.set(CUEVA.x, 0, CUEVA.z); cuevaG.visible = false; scene.add(cuevaG);
+const SALAS = { entrada: [0, 14, 5], cristales: [-10, -3, 7], lago: [11, -12, 6.5], tesoro: [14, 7, 4.5] };
+const SALIDA = { x: CUEVA.x, z: CUEVA.z + 17.6 }, COFRE = { x: CUEVA.x + 14, z: CUEVA.z + 8.6 }, SALA_CRISTALES = { x: CUEVA.x + SALAS.cristales[0], z: CUEVA.z + SALAS.cristales[1] };
+const CRISTALES = [];
+let luzCueva, cofreTapa, cofreAbierto = false;
+{
+  const rnd = seeded(907), circ = Object.values(SALAS).map(c => c.slice());
+  const tunel = pts => { for (let i = 0; i < pts.length - 1; i++){ const [ax, az] = pts[i], [bx, bz] = pts[i + 1], n = Math.ceil(Math.hypot(bx - ax, bz - az) / 1.6); for (let k = 0; k <= n; k++) circ.push([lerp(ax, bx, k / n), lerp(az, bz, k / n), 2.3]); } };
+  tunel([[0, 10], [-1, 5], [-5, 1]]); tunel([[-4, -6], [1, -9], [6, -11]]); tunel([[12, -6], [13, -1], [13.5, 3.5]]);
+  ZONAS.cueva = circ.map(([x, z, r]) => [x + CUEVA.x, z + CUEVA.z, r]);
+  // suelo, bóveda y paredes de roca
+  add(cuevaG, new THREE.CircleGeometry(48, 40), M(0x5d5778, { roughness: 1 }), 0, 0, 0, { cast: false }).rotation.x = -Math.PI / 2;
+  add(cuevaG, new THREE.SphereGeometry(47, 24, 14), new THREE.MeshBasicMaterial({ color: 0x1f1b33, side: THREE.BackSide, fog: false }), 0, 0, 0, { cast: false, recv: false });
+  const borde = [];
+  for (const [cx, cz, cr] of circ){
+    const n = Math.max(6, Math.round(TAU * cr / 1.2)), a0 = rnd() * TAU;
+    for (let i = 0; i < n; i++){
+      const a = a0 + i / n * TAU, x = cx + Math.cos(a) * (cr + 0.8), z = cz + Math.sin(a) * (cr + 0.8);
+      if (circ.some(([ox, oz, or]) => Math.hypot(x - ox, z - oz) < or + 0.6) || borde.some(b => Math.hypot(x - b[0], z - b[1]) < 0.85)) continue;
+      borde.push([x, z, Math.cos(a), Math.sin(a)]);
+    }
+  }
+  const P = { padre: cuevaG };
+  instancias(borde.length, new THREE.DodecahedronGeometry(1, 0), [0x6e6788, 0x5d5778, 0x7b7494, 0x655f80], rnd, (d, i) => {
+    const s = 0.85 + rnd() * 0.5, h = s * (0.75 + rnd() * 0.6); d.position.set(borde[i][0], h * 0.45, borde[i][1]); d.scale.set(s, h, s); d.rotation.y = rnd() * 3;
+  }, P);
+  const puas = borde.filter((b, i) => i % 3 === 0);
+  instancias(puas.length, new THREE.ConeGeometry(0.8, 4, 6), [0x57516f, 0x4f4968, 0x625c7c], rnd, (d, i) => {
+    const o = 2.4 + rnd() * 2.4, h = 0.55 + rnd() * 0.8; d.position.set(puas[i][0] + puas[i][2] * o, 2 * h, puas[i][1] + puas[i][3] * o); d.scale.set(1, h, 1); d.rotation.y = rnd() * 3;
+  }, P);
+  // cristalitos y honguitos que brillan
+  const brillos = Array.from({ length: 48 }, () => { const b = borde[Math.floor(rnd() * borde.length)], o = 0.5 + rnd() * 0.5; return [b[0] - b[2] * o + (rnd() - 0.5), b[1] - b[3] * o + (rnd() - 0.5)]; });
+  instancias(brillos.length, new THREE.OctahedronGeometry(0.3, 0), [0x9fe8ff, 0xc9a8ff, 0xff9fd0, 0x9fffd0], rnd, (d, i) => {
+    const s = 0.7 + rnd() * 1.1; d.position.set(brillos[i][0], 0.45 * s, brillos[i][1]); d.scale.set(s, s * 2.2, s); d.rotation.set((rnd() - 0.5) * 0.6, rnd() * 3, (rnd() - 0.5) * 0.6);
+  }, { padre: cuevaG, basico: true });
+  const hongos = Array.from({ length: 30 }, () => { const c = circ[Math.floor(rnd() * circ.length)], a = rnd() * TAU, r = c[2] * (0.55 + rnd() * 0.4); return [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r, 0.7 + rnd() * 0.9]; });
+  instancias(hongos.length, new THREE.CylinderGeometry(0.06, 0.09, 0.3, 6), [0xd8d2ea], rnd, (d, i) => { const [x, z, s] = hongos[i]; d.position.set(x, 0.15 * s, z); d.scale.setScalar(s); }, P);
+  instancias(hongos.length, new THREE.SphereGeometry(0.2, 8, 5, 0, TAU, 0, Math.PI / 2), [0x7fe8e0, 0x9fd0ff, 0xb9a8ff], rnd, (d, i) => { const [x, z, s] = hongos[i]; d.position.set(x, 0.27 * s, z); d.scale.set(s, s * 0.8, s); }, { padre: cuevaG, basico: true });
+  puntos(170, () => { const a = rnd() * TAU, r = Math.sqrt(rnd()) * 30; return [Math.cos(a) * r, 7 + rnd() * 5, Math.sin(a) * r]; }, { color: 0xa8f0ff, size: 0.35, fog: false, opacity: 0.9 }, cuevaG);
+  luzCueva = new THREE.PointLight(0xa9a0ff, 0, 60); luzCueva.position.set(0, 9, 0); cuevaG.add(luzCueva);
+  // salida: un arco de luz de día
+  add(cuevaG, new THREE.CircleGeometry(1.7, 24), new THREE.MeshBasicMaterial({ color: 0xfff4d8, fog: false }), 0, 1.3, 19.5, { cast: false, recv: false }).rotation.y = Math.PI;
+  for (let i = 0; i <= 8; i++){ const a = i / 8 * Math.PI; add(cuevaG, new THREE.DodecahedronGeometry(0.6, 0), M(0x6e6788, { flatShading: true }), Math.cos(a) * 1.95, 1.2 + Math.sin(a) * 1.95, 19.3, { cast: false }); }
+  // laguito subterráneo
+  const lg = [SALAS.lago[0] + 1.2, SALAS.lago[1] - 1.2];
+  add(cuevaG, new THREE.CircleGeometry(3, 32), new THREE.MeshBasicMaterial({ color: 0x4fc8d8, transparent: true, opacity: 0.85 }), lg[0], 0.03, lg[1], { cast: false, recv: false }).rotation.x = -Math.PI / 2;
+  add(cuevaG, new THREE.TorusGeometry(3.05, 0.22, 6, 32), M(0x7b7494), lg[0], 0.05, lg[1], { cast: false }).rotation.x = Math.PI / 2;
+  colliders.push({ x: CUEVA.x + lg[0], z: CUEVA.z + lg[1], r: 3 });
+  // cristales musicales
+  [[-2.7, -2.7, 0xff8fb5, 523.25], [2.7, -2.7, 0xffd76a, 659.25], [-2.7, 2.7, 0x6fdcb8, 783.99], [2.7, 2.7, 0x8fb4ff, 1046.5]].forEach(([dx, dz, color, nota]) => {
+    const x = SALAS.cristales[0] + dx, z = SALAS.cristales[1] + dz;
+    const geo = fundir([[new THREE.ConeGeometry(0.55, 2.4, 6), 0xffffff, [0, 1.2, 0]], [new THREE.ConeGeometry(0.34, 1.5, 6), 0xffffff, [0.45, 0.7, 0.1], 1, [0, 0, -0.45]], [new THREE.ConeGeometry(0.3, 1.3, 6), 0xffffff, [-0.4, 0.6, -0.15], 1, [0.2, 0, 0.5]]]);
+    const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35, flatShading: true, roughness: 0.4 });
+    const m = new THREE.Mesh(geo, mat); m.position.set(x, 0, z); cuevaG.add(m);
+    colliders.push({ x: CUEVA.x + x, z: CUEVA.z + z, r: 0.6 });
+    CRISTALES.push({ m, mat, nota, x: CUEVA.x + x, z: CUEVA.z + z, luz: 0 });
+  });
+  // cofre del tesoro
+  const cofre = new THREE.Group(); cofre.position.set(COFRE.x - CUEVA.x, 0, COFRE.z - CUEVA.z); cofre.rotation.y = Math.PI + 0.3; cuevaG.add(cofre);
+  add(cofre, new THREE.BoxGeometry(1.3, 0.7, 0.85), M(0xc98f5a), 0, 0.35, 0, { cast: false });
+  add(cofre, new THREE.BoxGeometry(1.36, 0.12, 0.9), M(0xffd76a, { emissive: 0xffc040, emissiveIntensity: 0.35 }), 0, 0.68, 0, { cast: false });
+  cofreTapa = new THREE.Group(); cofreTapa.position.set(0, 0.74, -0.42); cofre.add(cofreTapa);
+  add(cofreTapa, new THREE.CylinderGeometry(0.43, 0.43, 1.3, 14, 1, false, 0, Math.PI), M(0xc98f5a), 0, 0, 0.42, { cast: false }).rotation.set(0, 0, Math.PI / 2);
+  add(cofre, new THREE.BoxGeometry(0.2, 0.26, 0.08), M(0xffd76a, { emissive: 0xffc040, emissiveIntensity: 0.35 }), 0, 0.6, 0.45, { cast: false });
+  colliders.push({ x: COFRE.x, z: COFRE.z, r: 0.85 });
+}
+// Postes de los minijuegos
+const postes = [];
+function poste(x, z, emoji, padre = scene, ox = 0, oz = 0){
+  const g = new THREE.Group(); g.position.set(x - ox, 0, z - oz); padre.add(g);
+  add(g, new THREE.CylinderGeometry(0.09, 0.13, 1.7, 8), M(0xc9a27e), 0, 0.85, 0);
+  add(g, new THREE.SphereGeometry(0.2, 10, 8), M(0xf4a9bf), 0, 1.78, 0);
+  const s = emojiSprite(emoji); s.scale.set(1.15, 1.15, 1); s.position.y = 2.7; g.add(s);
+  colliders.push({ x, z, r: 0.3 }); postes.push(s); return { x, z };
+}
+const POSTE_ESTRELLAS = poste(4.6, -33.2, "⭐"), POSTE_CARRERA = poste(-2.6, 11.2, "🏁"), POSTE_CRISTALES = poste(SALA_CRISTALES.x, SALA_CRISTALES.z, "🎶", cuevaG, CUEVA.x, CUEVA.z);
+// Muelle para pescar en el laguito
+const MUELLE = { x: LAGO.x + 5.5, z: LAGO.z };
+add(scene, new THREE.BoxGeometry(3, 0.14, 1.3), M(0xe0b893), LAGO.x + 4.1, 0.2, LAGO.z);
+[[2.8, -0.55], [2.8, 0.55], [5.4, -0.55], [5.4, 0.55]].forEach(([dx, dz]) => add(scene, new THREE.CylinderGeometry(0.09, 0.09, 0.6, 6), M(0xc9a27e), LAGO.x + dx, 0.22, LAGO.z + dz));
+const boya = add(scene, new THREE.SphereGeometry(0.16, 10, 8), M(0xff8fa8), LAGO.x + 1.7, 0.1, LAGO.z, { cast: false }); boya.visible = false;
+// aro de la carrera
+const aro = add(scene, new THREE.TorusGeometry(1.6, 0.13, 8, 26), new THREE.MeshBasicMaterial({ color: 0xffd76a }), 0, 1.6, 0, { cast: false, recv: false }); aro.visible = false;
+let enCueva = false, cuevaF = 0, viajando = false, saltoCamara = false;
+function viajar(x, z, rot){
+  if (viajando) return; viajando = true; const v = $("#velo"); v.classList.add("on");
+  setTimeout(() => { yo.pos.set(x, 0, z); yo.rot = rot; yo.vy = 0; yo.sentado = false; camYaw = rot + Math.PI; saltoCamara = true; v.classList.remove("on"); viajando = false; }, 330);
+}
+const entrarCueva = () => { viajar(CUEVA.x, CUEVA.z + 15, Math.PI); setTimeout(() => toast("🕳️ La cueva de los cristales. Dicen que al fondo hay un tesoro…", 4200), 600); };
+const salirCueva = () => viajar(BOCA.x, BOCA.z + 1.6, 0);
 
 /* ============ Muñequitos ============ */
 const COLORES = ["#f7b7c8", "#cdb8f0", "#b8e6d0", "#bfe0f5", "#fde3a7", "#f9cfb0", "#e8e0d4", "#d8f0b8"];
@@ -971,14 +1118,15 @@ $("#entrar").onclick = () => {
   ["#hud", "#mapa", "#barra", "#sonido", "#foto", "#cielo"].forEach(s => $(s).classList.remove("hidden"));
   if (esTactil){ $("#joy").classList.remove("hidden"); $("#saltar").classList.remove("hidden"); }
   jugando = true; audio(); musicaAmbiente();
-  toast("¡Bienvenidx, " + yo.nombre + "! Busca los gatitos, perritos y regalos escondidos 🐾");
+  toast("¡Bienvenidx, " + yo.nombre + "! Hay mascotas, regalos, minijuegos y una cueva al norte 🐾", 5000);
   actualizarContadores();
 };
 $("#nombre").addEventListener("keydown", e => { if (e.key === "Enter") $("#entrar").click(); });
 
 let toastT = null;
 function toast(t, ms = 3200){ const el = $("#toast"); el.textContent = t; el.classList.add("ver"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("ver"), ms); }
-function actualizarContadores(){ $("#contadores").textContent = `🐾 ${caricias}/${mascotas.length} · 🎁 ${encontrados}/${regalos.length}`; }
+function actualizarContadores(){ if (juego) return; $("#contadores").textContent = `🐾 ${caricias}/${mascotas.length} · 🎁 ${encontrados}/${regalos.length} · 🎣 ${pescados.size}/${PECES.length}`; }
+function mostrarCarta(titulo, texto){ $("#cartaTitulo").textContent = titulo; $("#cartaTexto").textContent = texto; $("#carta").classList.remove("hidden"); modalAbierto = true; for (const k in teclas) teclas[k] = false; }
 
 /* ============ Controles ============ */
 const teclas = {};
@@ -1074,12 +1222,24 @@ let accionActual = null;
 $("#accion").onclick = () => accionar();
 function calcularAccion(){
   if (yo.sentado) return { t: "🧍 Levantarse", f: levantarse };
+  if (pesca) return { t: textoPesca(), f: pescar };
   const p = yo.pos; let mejor = null, dMejor = 1e9;
   const prueba = (d, max, a) => { if (d < max && d < dMejor){ dMejor = d; mejor = a; } };
   prueba(Math.hypot(p.x, p.z), 6.5, velasEncendidas ? { t: "🎂 Soplar las velas", f: soplarVelas } : null);
   prueba(Math.hypot(p.x - buzon.position.x, p.z - buzon.position.z), 3.2, { t: "💌 Dejar un mensaje", f: abrirMensajes });
   prueba(Math.hypot(p.x - tablero.position.x, p.z - tablero.position.z), 3.6, { t: "📋 Leer mensajes", f: abrirMensajes });
   prueba(Math.hypot(p.x - LAGO.x, p.z - LAGO.z), 6.5, { t: "🏮 Soltar un farolito", f: farolito });
+  const hasta = (o, max, a) => prueba(Math.hypot(p.x - o.x, p.z - o.z), max, a);
+  if (enCueva){
+    hasta(SALIDA, 2.8, { t: "🌤️ Salir de la cueva", f: salirCueva });
+    hasta(COFRE, 2.6, cofreAbierto ? null : { t: "💎 Abrir el cofre", f: abrirCofre });
+    hasta(POSTE_CRISTALES, 2.4, juego ? null : { t: "🎶 Jugar: cristales musicales", f: jugarCristales });
+    return mejor;
+  }
+  hasta(BOCA, 2.8, { t: "🕳️ Entrar a la cueva", f: entrarCueva });
+  hasta(POSTE_ESTRELLAS, 2.6, juego ? null : { t: "⭐ Jugar: atrapa estrellas", f: jugarEstrellas });
+  hasta(POSTE_CARRERA, 2.6, juego ? null : { t: "🏁 Jugar: carrera", f: jugarCarrera });
+  hasta(MUELLE, 2.3, juego ? null : { t: "🎣 Pescar", f: pescar });
   prueba(Math.hypot(p.x - COHETES.x, p.z - COHETES.z), 3.2, { t: "🎆 Lanzar fuegos artificiales", f: lanzarFuegos });
   for (const a of ASIENTOS) prueba(Math.hypot(p.x - a.x, p.z - a.z) + 0.6, 2.5, { t: "🪑 Sentarse", f: () => sentarse(a) });
   for (const m of mascotas) prueba(Math.hypot(p.x - m.g.position.x, p.z - m.g.position.z), 2.0, { t: (m.tipo === "gato" ? "🐱" : "🐶") + " Acariciar a " + m.nombre, f: () => acariciar(m) });
@@ -1101,10 +1261,128 @@ function farolito(){
   const x = LAGO.x + Math.cos(a) * r, z = LAGO.z + Math.sin(a) * r, c = COLORES_FAROL[Math.floor(Math.random() * 5)];
   soltarFarolito(x, z, c); campanita(); enviarEvento("farol", { x: +x.toFixed(1), z: +z.toFixed(1), c });
 }
+function abrirCofre(){
+  if (cofreAbierto) return; cofreAbierto = true; campanita(); confeti(COFRE.x, 1.5, COFRE.z, 90, [0xffd76a, 0xfff0b8, 0xffffff, 0xffc4d6]);
+  anunciar("💎 ¡Encontré el tesoro de la cueva!"); setTimeout(() => mostrarCarta("💎 ¡Encontraste el tesoro de la cueva!", TESORO_CUEVA), 1000);
+}
 function acariciar(m){
   m.feliz = 2.5; m.espera = 3; m.sigue = 40; corazones(m.g); ronroneo();
   if (!m.acariciada){ m.acariciada = true; caricias++; actualizarContadores();
     toast(caricias === mascotas.length ? "¡Acariciaste a todas las mascotas! 🐾💖" : `${m.nombre} está feliz y te va a seguir un ratito 💗`); }
+}
+
+/* ============ Minijuegos ============ */
+const JUEGOS = {
+  estrellas: { e: "⭐", nombre: "Atrapa estrellas", mayor: true, fmt: p => p + (p === 1 ? " estrella" : " estrellas") },
+  carrera: { e: "🏁", nombre: "Carrera alrededor del pastel", mayor: false, fmt: p => (p / 10).toFixed(1) + " segundos" },
+  cristales: { e: "🎶", nombre: "Cristales musicales", mayor: true, fmt: p => p + " notas seguidas" }
+};
+const RECORDS = {}; // el récord de la isla en cada juego, compartido entre todos
+const mejores = (() => { try { return JSON.parse(localStorage.getItem("isla-andrew-juegos") || "{}") || {}; } catch (e) { return {}; } })();
+const guardarMejores = () => { try { localStorage.setItem("isla-andrew-juegos", JSON.stringify(mejores)); } catch (e) {} };
+const mejorQue = (tipo, a, b) => JUEGOS[tipo].mayor ? a > b : a < b;
+let juego = null, textoMarcador = "";
+function marcador(txt){ if (txt !== textoMarcador){ textoMarcador = txt; $("#contadores").textContent = txt; } }
+function recordRemoto(tipo, d){
+  if (!JUEGOS[tipo] || !d || typeof d !== "object") return;
+  const p = Math.round(num(d.p, -1)); if (p <= 0 || p > 99999) return;
+  if (!RECORDS[tipo] || mejorQue(tipo, p, RECORDS[tipo].p)) RECORDS[tipo] = { n: recortar(String(d.n || "Alguien"), 18), p };
+}
+function anunciar(txt){ if (!miAv) return; yo.dicho = recortar(txt, 48); yo.dichoAt = Date.now(); mostrarGlobo(miAv, yo.dicho); }
+function empezarJuego(tipo, datos){
+  if (juego || pesca) return false;
+  const j = JUEGOS[tipo], r = RECORDS[tipo];
+  juego = Object.assign({ tipo }, datos); textoMarcador = "";
+  toast(`${j.e} ${j.nombre}` + (r ? ` · Récord de la isla: ${r.n}, ${j.fmt(r.p)}` : ""), 3600); campanita();
+  return true;
+}
+function terminarJuego(p, valido){
+  const tipo = juego.tipo, j = JUEGOS[tipo];
+  if (juego.estrellas) juego.estrellas.forEach(s => quitarSprite(scene, s));
+  juego = null; aro.visible = false; textoMarcador = ""; actualizarContadores();
+  if (!valido) return;
+  let extra = "";
+  if (mejores[tipo] === undefined || mejorQue(tipo, p, mejores[tipo])){ mejores[tipo] = p; guardarMejores(); extra = " ¡Tu mejor marca!"; }
+  const r = RECORDS[tipo];
+  if (!r || mejorQue(tipo, p, r.p)){ RECORDS[tipo] = { n: yo.nombre, p }; enviarEvento("rec_" + tipo, { n: yo.nombre, p }); extra = " 🏆 ¡Nuevo récord de la isla!"; confeti(yo.pos.x, 2, yo.pos.z, 60); }
+  toast(`${j.e} ${j.fmt(p)}.${extra}`, 5000); campanita();
+  anunciar(`${j.e} ¡${j.fmt(p)}!`);
+}
+// 1. Atrapa estrellas: 30 segundos para recoger todas las que puedas en el claro
+function nuevaEstrella(){
+  const a = rand(0, TAU), r = Math.sqrt(Math.random()) * CAMPO.r, s = emojiSprite("⭐");
+  s.position.set(CAMPO.x + Math.cos(a) * r, 1, CAMPO.z + Math.sin(a) * r); s.userData.f = rand(0, 9); scene.add(s); juego.estrellas.push(s);
+}
+function jugarEstrellas(){ if (empezarJuego("estrellas", { tt: 30, p: 0, estrellas: [] })) for (let i = 0; i < 5; i++) nuevaEstrella(); }
+// 2. Carrera: una vuelta alrededor del pastel pasando por los aros
+const AROS = Array.from({ length: 8 }, (_, i) => { const a = Math.PI / 2 + (i + 1) * TAU / 8; return [Math.cos(a) * 13, Math.sin(a) * 13, a]; });
+function ponerAro(){ const [x, z, a] = AROS[juego.i]; aro.position.set(x, 1.6, z); aro.rotation.y = -a; aro.visible = true; }
+function jugarCarrera(){ if (empezarJuego("carrera", { tt: 0, i: 0 })) ponerAro(); }
+// 3. Cristales musicales: repetir la melodía tocando los cristales en orden
+let cristalSobre = -1;
+const alAzar4 = () => Math.floor(Math.random() * 4);
+function encender(i){ const c = CRISTALES[i]; c.luz = 1; tono(c.nota, 0.6, 0, 0.07); tono(c.nota * 2, 0.4, 0, 0.02); }
+function jugarCristales(){ empezarJuego("cristales", { sec: [alAzar4(), alAzar4()], fase: "pausa", tt: 1.6, k: 0, p: 0 }); }
+// 4. Pesca tranquila en el laguito
+const PECES = [["🐟", "un pececito plateado"], ["🐠", "un pez de colores"], ["🐡", "un pez globo"], ["🦐", "un camaroncito"], ["🦀", "un cangrejito"], ["🐢", "una tortuguita"], ["⭐", "una estrella de agua dulce"], ["👢", "una bota vieja"]];
+const pescados = new Set((Array.isArray(mejores.peces) ? mejores.peces : []).filter(i => Number.isInteger(i) && i >= 0 && i < PECES.length));
+let pesca = null;
+function finPesca(){ pesca = null; boya.visible = false; }
+function pescar(){
+  if (juego) return;
+  if (!pesca){ pesca = { fase: "espera", tt: rand(2.5, 6.5) }; boya.visible = true; yo.rot = Math.atan2(LAGO.x - yo.pos.x, LAGO.z - yo.pos.z); toast("🎣 Espera quietecito a que pique…", 2600); return; }
+  if (pesca.fase === "espera"){ toast("¡Muy pronto! El pez se asustó 💨", 2400); finPesca(); return; }
+  const faltan = PECES.map((_, i) => i).filter(i => !pescados.has(i));
+  const i = faltan.length && Math.random() < 0.6 ? faltan[Math.floor(Math.random() * faltan.length)] : Math.floor(Math.random() * PECES.length);
+  const nuevo = !pescados.has(i); pescados.add(i); mejores.peces = [...pescados]; guardarMejores(); finPesca(); actualizarContadores(); campanita();
+  mostrarEmote(miAv, PECES[i][0]);
+  if (nuevo && pescados.size === PECES.length){ confeti(yo.pos.x, 2, yo.pos.z, 90); toast(`🎣 ¡Pescaste ${PECES[i][1]}! Ya tienes los ${PECES.length} 🏆`, 5000); anunciar("🎣 ¡Pesqué todo lo del laguito!"); }
+  else toast(`🎣 ¡Pescaste ${PECES[i][1]}! ${PECES[i][0]}` + (nuevo ? ` (${pescados.size}/${PECES.length})` : " Ese ya lo tenías"), 3800);
+}
+function textoPesca(){ return !pesca ? "🎣 Pescar" : pesca.fase === "espera" ? "🎣 Esperando…" : "❗ ¡Pica! Jala ya"; }
+function actualizarJuegos(dt, t){
+  if (pesca){
+    pesca.tt -= dt;
+    if (pesca.fase === "espera"){ boya.position.y = 0.1 + Math.sin(t * 2.5) * 0.03; if (pesca.tt <= 0){ pesca.fase = "pica"; pesca.tt = 1.5; tono(1318, 0.25, 0, 0.07); tono(1760, 0.3, 0.1, 0.06); } }
+    else { boya.position.y = 0.02 + Math.sin(t * 30) * 0.05; if (pesca.tt <= 0){ toast("Se escapó… 🌊 Inténtalo otra vez", 2400); finPesca(); } }
+  }
+  // los cristales suenan al acercarse, haya juego o no
+  let cerca = -1;
+  if (enCueva) for (let i = 0; i < 4; i++) if (Math.hypot(yo.pos.x - CRISTALES[i].x, yo.pos.z - CRISTALES[i].z) < 1.55) cerca = i;
+  const toco = cerca !== cristalSobre && cerca >= 0; cristalSobre = cerca;
+  const j = juego;
+  if (!j){ if (toco) encender(cerca); return; }
+  if (j.tipo === "estrellas"){
+    j.tt -= dt;
+    for (let i = j.estrellas.length - 1; i >= 0; i--){
+      const s = j.estrellas[i]; s.position.y = 1 + Math.sin(t * 3 + s.userData.f) * 0.2;
+      if (Math.hypot(yo.pos.x - s.position.x, yo.pos.z - s.position.z) < 1.35){ quitarSprite(scene, s); j.estrellas.splice(i, 1); j.p++; tono(880 + Math.min(j.p, 20) * 30, 0.25, 0, 0.05); nuevaEstrella(); }
+    }
+    marcador(`⭐ ${j.p} · ⏱ ${Math.max(0, Math.ceil(j.tt))} s`);
+    if (j.tt <= 0) terminarJuego(j.p, true);
+  } else if (j.tipo === "carrera"){
+    j.tt += dt; aro.scale.setScalar(1 + Math.sin(t * 6) * 0.06);
+    const [x, z] = AROS[j.i];
+    if (Math.hypot(yo.pos.x - x, yo.pos.z - z) < 2.1){ j.i++; tono(660 + j.i * 60, 0.25, 0, 0.06); if (j.i === AROS.length) return terminarJuego(Math.round(j.tt * 10), true); ponerAro(); }
+    marcador(`🏁 ${j.i}/${AROS.length} · ⏱ ${j.tt.toFixed(1)} s`);
+    if (j.tt > 120 || enCueva){ toast("🏁 La carrera se canceló", 2400); terminarJuego(0, false); }
+  } else if (j.tipo === "cristales"){
+    marcador(`🎶 Melodía de ${j.sec.length} notas` + (j.fase === "turno" ? ` · ${j.k}/${j.sec.length}` : " · escucha"));
+    if (Math.hypot(yo.pos.x - SALA_CRISTALES.x, yo.pos.z - SALA_CRISTALES.z) > 10) return terminarJuego(j.p, j.p > 0);
+    j.tt -= dt;
+    if (j.fase === "pausa"){ if (j.tt <= 0){ j.fase = "muestra"; j.k = 0; j.tt = 0; } }
+    else if (j.fase === "muestra"){
+      if (j.tt <= 0){
+        if (j.k < j.sec.length){ encender(j.sec[j.k++]); j.tt = 0.8; }
+        else { j.fase = "turno"; j.k = 0; toast("🎶 ¡Tu turno! Acércate a los cristales en el mismo orden", 3000); }
+      }
+    } else if (toco){
+      encender(cerca);
+      if (cerca === j.sec[j.k]){
+        if (++j.k === j.sec.length){ j.p = j.sec.length; j.sec.push(alAzar4()); j.fase = "pausa"; j.tt = 1.5; tono(1568, 0.5, 0.25, 0.04); }
+      } else { tono(196, 0.6, 0.15, 0.06, "triangle"); if (j.p > 0) terminarJuego(j.p, true); else { toast("🎶 ¡Casi! Escucha otra vez y vuelve a intentarlo", 3200); terminarJuego(0, false); } }
+    }
+  }
 }
 
 /* ============ Mensajes (persistentes) ============ */
@@ -1179,8 +1457,8 @@ function syncPeers(lista){
     const orejas = OREJAS[s.o] ? s.o : "nada", acc = ACCESORIOS[s.a] ? s.a : "nada";
     const nombre = recortar(s.n || "Amigx", 18);
     const clave = [nombre, color, orejas, acc].join("|");
-    const d0 = Math.hypot(s.x, s.z), k = d0 > RADIO_ISLA + 1 ? (RADIO_ISLA + 1) / d0 : 1;
-    const nx = s.x * k, nz = s.z * k, ny = Math.max(0, Math.min(5, num(s.y)));
+    const lim = { x: s.x, z: s.z }; limitar(lim);
+    const nx = lim.x, nz = lim.z, ny = Math.max(0, Math.min(5, num(s.y)));
     let r = remotos.get(id);
     if (r && r.clave !== clave){ quitarMunequito(r.av); remotos.delete(id); r = null; }
     if (!r){
@@ -1269,8 +1547,9 @@ async function iniciarFirebase(){
       if (!ev || typeof ev.at !== "number" || vistos[tipo] === ev.at) continue;
       vistos[tipo] = ev.at;
       const d = typeof ev.d === "string" ? ev.d : "", i = d.indexOf("|");
-      if (primera || d.slice(0, i) === miId || Math.abs(Date.now() + desfase - ev.at) > 15000) continue;
       let datos = null; try { datos = JSON.parse(d.slice(i + 1) || "null"); } catch (e) {}
+      if (tipo.startsWith("rec_")){ recordRemoto(tipo.slice(4), datos); continue; } // los récords se leen siempre, también los viejos
+      if (primera || d.slice(0, i) === miId || Math.abs(Date.now() + desfase - ev.at) > 15000) continue;
       eventoRemoto(tipo, datos);
     }
   }, sinPermiso);
@@ -1342,19 +1621,26 @@ async function iniciarClaude(){
 /* ============ Minimapa ============ */
 const mapa = $("#mapa"), mx = mapa.getContext("2d");
 function dibujarMapa(){
-  const W = 264, s = W / 2 / 34; mx.clearRect(0, 0, W, W);
-  mx.save(); mx.translate(W / 2, W / 2);
-  mx.fillStyle = "#fbe6c2"; mx.beginPath(); mx.arc(0, 0, 34 * s, 0, TAU); mx.fill();
-  mx.fillStyle = "#bfe6b4"; mx.beginPath(); mx.arc(0, 0, 32 * s, 0, TAU); mx.fill();
-  mx.fillStyle = "#9ccf9e"; for (const a of arboles){ mx.beginPath(); mx.arc(a.x * s, a.z * s, 4.2, 0, TAU); mx.fill(); }
-  mx.fillStyle = "#9fd4ea"; mx.beginPath(); mx.arc(LAGO.x * s, LAGO.z * s, 4.2 * s, 0, TAU); mx.fill();
-  mx.font = "26px serif"; mx.textAlign = "center"; mx.textBaseline = "middle";
-  mx.fillText("🎂", 0, 0); mx.fillText("💌", buzon.position.x * s, buzon.position.z * s);
-  mx.font = "20px serif"; mx.fillText("🔥", FOGATA.x * s, FOGATA.z * s); mx.fillText("🎆", COHETES.x * s, COHETES.z * s);
-  for (const m of mascotas){ mx.font = "18px serif"; mx.fillText("🐾", m.g.position.x * s, m.g.position.z * s); }
-  for (const [, r] of remotos){ mx.fillStyle = "#fff"; mx.beginPath(); mx.arc(r.av.g.position.x * s, r.av.g.position.z * s, 7, 0, TAU); mx.fill(); mx.fillStyle = r.clave.split("|")[1]; mx.beginPath(); mx.arc(r.av.g.position.x * s, r.av.g.position.z * s, 5, 0, TAU); mx.fill(); }
-  mx.translate(yo.pos.x * s, yo.pos.z * s); mx.rotate(-yo.rot + Math.PI);
-  mx.fillStyle = "#b0688a"; mx.beginPath(); mx.moveTo(0, -11); mx.lineTo(8, 8); mx.lineTo(-8, 8); mx.closePath(); mx.fill();
+  const W = 264; mx.clearRect(0, 0, W, W); mx.save(); mx.translate(W / 2, W / 2);
+  const ox = enCueva ? CUEVA.x + 0.75 : 0, oz = enCueva ? CUEVA.z + 0.25 : -14, s = W / 2 / (enCueva ? 21 : 50);
+  const X = x => (x - ox) * s, Z = z => (z - oz) * s, disco = (x, z, r, c) => { mx.fillStyle = c; mx.beginPath(); mx.arc(X(x), Z(z), r, 0, TAU); mx.fill(); };
+  const icono = (e, x, z, px) => { mx.font = px + "px serif"; mx.fillText(e, X(x), Z(z)); };
+  mx.textAlign = "center"; mx.textBaseline = "middle";
+  if (enCueva){
+    disco(ox, oz, W / 2, "#3a3454");
+    for (const [x, z, r] of ZONAS.cueva) disco(x, z, r * s, "#9089b0");
+    icono("🌤️", SALIDA.x, SALIDA.z, 22); icono("🎶", POSTE_CRISTALES.x, POSTE_CRISTALES.z, 22); if (!cofreAbierto) icono("❓", COFRE.x, COFRE.z, 20);
+  } else {
+    disco(0, 0, 34 * s, "#fbe6c2"); disco(LOBULO.x, LOBULO.z, 20 * s, "#fbe6c2"); disco(0, 0, 32 * s, "#bfe6b4"); disco(LOBULO.x, LOBULO.z, 18 * s, "#bfe6b4");
+    for (const a of arboles) disco(a.x, a.z, 3, "#9ccf9e");
+    disco(LAGO.x, LAGO.z, 4.2 * s, "#9fd4ea"); disco(COLINA.x, COLINA.z, 6 * s, "#b9b2c8");
+    icono("🎂", 0, 0, 22); icono("💌", buzon.position.x, buzon.position.z, 18); icono("🔥", FOGATA.x, FOGATA.z, 16); icono("🎆", COHETES.x, COHETES.z, 16);
+    icono("🕳️", BOCA.x, BOCA.z - 3, 18); icono("⭐", POSTE_ESTRELLAS.x, POSTE_ESTRELLAS.z, 15); icono("🏁", POSTE_CARRERA.x, POSTE_CARRERA.z, 15); icono("🎣", MUELLE.x, MUELLE.z, 15);
+    for (const m of mascotas) icono("🐾", m.g.position.x, m.g.position.z, 13);
+  }
+  for (const [, r] of remotos){ const q = r.av.g.position; if (enLaCueva(q.z) !== enCueva) continue; disco(q.x, q.z, 6, "#fff"); disco(q.x, q.z, 4.5, r.clave.split("|")[1]); }
+  mx.translate(X(yo.pos.x), Z(yo.pos.z)); mx.rotate(-yo.rot + Math.PI);
+  mx.fillStyle = "#b0688a"; mx.beginPath(); mx.moveTo(0, -10); mx.lineTo(7, 7); mx.lineTo(-7, 7); mx.closePath(); mx.fill();
   mx.restore();
 }
 
@@ -1381,7 +1667,7 @@ function resolverColisiones(p, r = 0.45){
     const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), min = c.r + r;
     if (d < min && d > 1e-4){ p.x = c.x + dx / d * min; p.z = c.z + dz / d * min; }
   }
-  const d = Math.hypot(p.x, p.z); if (d > RADIO_ISLA){ p.x *= RADIO_ISLA / d; p.z *= RADIO_ISLA / d; }
+  limitar(p);
 }
 function loop(){
   requestAnimationFrame(loop);
@@ -1392,7 +1678,10 @@ function loop(){
   llamas.forEach((l, i) => { l.scale.y = 1.6 + Math.sin(t * 12 + i) * 0.25; });
   if (velasEncendidas) luzPastel.intensity = 0.75 + Math.sin(t * 9) * 0.08;
   bandera.rotation.z = Math.sin(t * 2) * 0.1;
-  aplicarCielo(dt);
+  enCueva = enLaCueva(yo.pos.z); aplicarCielo(dt);
+  for (let i = 0; i < postes.length; i++) postes[i].position.y = 2.7 + Math.sin(t * 2 + i) * 0.12;
+  for (const c of CRISTALES){ c.luz = Math.max(0, c.luz - dt * 1.6); c.mat.emissiveIntensity = 0.35 + c.luz * 1.8; c.m.scale.setScalar(1 + c.luz * 0.12); }
+  cofreTapa.rotation.x = lerp(cofreTapa.rotation.x, cofreAbierto ? -1.25 : 0, Math.min(1, dt * 4));
   for (const a of arboles) a.g.rotation.z = Math.sin(t * 0.9 + a.fase) * 0.012;
   llamaFogata[0].scale.set(1 + Math.sin(t * 13) * 0.08, 1 + Math.sin(t * 9) * 0.14, 1 + Math.cos(t * 11) * 0.08); llamaFogata[1].scale.y = 1 + Math.sin(t * 15 + 1) * 0.2;
   if (noche > 0.02){
@@ -1422,6 +1711,7 @@ function loop(){
       if (miAv){ const a = Math.atan2(yo.pos.x - g.position.x, yo.pos.z - g.position.z); m.rot = angLerp(m.rot, a, dt * 5); } }
     else if (m.sigue > 0 && miAv){ // después de una caricia te acompaña un rato
       m.sigue -= dt; const dx = yo.pos.x - g.position.x, dz = yo.pos.z - g.position.z, d = Math.hypot(dx, dz) || 1;
+      if (d > 45) m.sigue = 0; // no entra a la cueva: te espera afuera
       if (d > 2.2){ const v = Math.min(5.8, 1.5 + d); g.position.x += dx / d * v * dt; g.position.z += dz / d * v * dt; mov = 1; resolverColisiones(g.position, 0.4); }
       m.rot = angLerp(m.rot, Math.atan2(dx, dz), dt * 6); u.cuerpo.position.y = lerp(u.cuerpo.position.y, 0, dt * 8); if (u.cola) u.cola.rotation.z = Math.sin(t * 12) * 0.4;
       if (m.sigue <= 0){ m.obj = { x: m.casa.x, z: m.casa.z }; m.espera = 0; }
@@ -1438,13 +1728,14 @@ function loop(){
   // jugador
   if (jugando && miAv){
     let ix = 0, iy = 0;
-    if (!modalAbierto){
+    if (!modalAbierto && !viajando){
       if (teclas.KeyW || teclas.ArrowUp) iy += 1; if (teclas.KeyS || teclas.ArrowDown) iy -= 1;
       if (teclas.KeyD || teclas.ArrowRight) ix += 1; if (teclas.KeyA || teclas.ArrowLeft) ix -= 1;
       ix += joy.x; iy -= joy.y;
     }
     const mag = Math.min(1, Math.hypot(ix, iy));
     if (yo.sentado && mag > 0.08) levantarse();
+    if (pesca && mag > 0.08) finPesca();
     if (mag > 0.08){
       const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = Math.cos(camYaw), rz = -Math.sin(camYaw);
       let mx2 = fx * iy + rx * ix, mz = fz * iy + rz * ix; const l = Math.hypot(mx2, mz) || 1; mx2 /= l; mz /= l;
@@ -1466,10 +1757,11 @@ function loop(){
       if (Math.hypot(yo.pos.x - r.g.position.x, yo.pos.z - r.g.position.z) < 1.4){
         r.encontrado = true; scene.remove(r.g); encontrados++; actualizarContadores(); campanita();
         confeti(r.g.position.x, 1, r.g.position.z, 40);
-        if (encontrados === regalos.length){ setTimeout(() => { $("#cartaTexto").textContent = FRASES_REGALOS.join("\n\n"); $("#carta").classList.remove("hidden"); modalAbierto = true; }, 900); }
+        if (encontrados === regalos.length){ setTimeout(() => mostrarCarta("🎁 ¡Encontraste todos los regalos!", FRASES_REGALOS.join("\n\n")), 900); }
         else toast(`🎁 "${FRASES_REGALOS[encontrados - 1]}"`, 5000);
       }
     }
+    actualizarJuegos(dt, t);
     // botón de acción
     const a = calcularAccion();
     if ((a && a.t) !== (accionActual && accionActual.t)){ accionActual = a; $("#accion").classList.toggle("hidden", !a); if (a) $("#accion").textContent = a.t + (esTactil ? "" : "  (E)"); }
@@ -1484,7 +1776,7 @@ function loop(){
     let paso = 0;
     if (d > 1e-4){ paso = Math.min(d, r.vel * dt); q.x += dx / d * paso; q.y += dy / d * paso; q.z += dz / d * paso; }
     g.rotation.y = angLerp(g.rotation.y, r.r, Math.min(1, dt * 10));
-    r.av.sombra.position.y = 0.02 - q.y;
+    r.av.sombra.position.y = 0.02 - q.y; g.visible = enLaCueva(q.z) === enCueva;
     const caminando = q.y < 0.05 && paso / Math.max(dt, 1e-3) > 0.8;
     r.mov = lerp(r.mov, caminando ? 1 : 0, Math.min(1, dt * 14));
     animarMunequito(r.av, t, r.mov > 0.5 ? 1 : 0, dt, r.sent);
@@ -1499,8 +1791,9 @@ function loop(){
   }
   // cámara
   const foco = miAv ? yo.pos : new THREE.Vector3(0, 0, 0);
-  const yaw = jugando ? camYaw : t * 0.12, dist = jugando ? camDist : 26;
-  const objetivo = new THREE.Vector3(foco.x + Math.sin(yaw) * dist, foco.y + (jugando ? dist * 0.42 : 14), foco.z + Math.cos(yaw) * dist);
+  const yaw = jugando ? camYaw : t * 0.12, dist = jugando ? Math.min(camDist, lerp(18, 8.5, cuevaF)) : 26; // en la cueva la cámara sube para ver por encima de las rocas
+  const objetivo = new THREE.Vector3(foco.x + Math.sin(yaw) * dist, foco.y + (jugando ? dist * lerp(0.42, 1.05, cuevaF) : 14), foco.z + Math.cos(yaw) * dist);
+  if (saltoCamara){ saltoCamara = false; camPos.copy(objetivo); mira.set(foco.x, foco.y + 1.2, foco.z); }
   camPos.lerp(objetivo, Math.min(1, dt * 5));
   camera.position.copy(camPos);
   mira.lerp(new THREE.Vector3(foco.x, foco.y + 1.2, foco.z), Math.min(1, dt * 8));

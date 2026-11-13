@@ -50,6 +50,19 @@ Todas las personas que abran el enlace al mismo tiempo se ven entre sí. Arriba 
 - **Tomar fotos de recuerdo** con 📸. Se guardan con un letrerito de feliz cumpleaños.
 - **Ver el atardecer.** Cada pocos minutos anochece para todos a la vez: salen estrellas, luciérnagas y se encienden las farolas. Con el botón 🌗 puedes dejarlo siempre de día o siempre de noche solo para ti.
 
+## Minijuegos
+
+Cada juego tiene un poste con su dibujito flotando encima. Acércate y usa el botón rosado. Cuando terminas, tu resultado sale en un globito para que lo vean los demás, y si superas a todos queda guardado como récord de la isla.
+
+- **⭐ Atrapa estrellas.** En el claro del norte. Tienes 30 segundos para recoger todas las estrellas que puedas.
+- **🏁 Carrera.** Junto a la entrada. Da la vuelta al pastel pasando por los ocho aros dorados lo más rápido que puedas.
+- **🎣 Pesca.** En el muelle del laguito. Espera sin moverte y, cuando el botón diga que pica, jala rápido. Hay ocho cosas distintas por pescar.
+- **🎶 Cristales musicales.** Dentro de la cueva. Los cristales tocan una melodía y tienes que repetirla acercándote a ellos en el mismo orden. Cada ronda suma una nota.
+
+## La cueva
+
+Al norte de la isla, pasando el claro, hay una colina de piedra con una entrada (🕳️ en el mapa). Adentro hay túneles, un laguito subterráneo, la sala de los cristales musicales y, bien al fondo, un cofre con un tesoro. Para salir, vuelve a la luz de la entrada.
+
 El mapa redondo de arriba a la derecha muestra dónde estás tú, tus amigos, las mascotas y los lugares importantes. Con 🎵 se apaga o se prende la música.
 
 ## Si algo no funciona
@@ -70,6 +83,7 @@ Los textos se cambian al inicio del `<script>` de `index.html`:
 
 - `CUMPLE`: el nombre que aparece en el letrero y en los mensajes.
 - `FRASES_REGALOS`: las cinco frases de los regalos escondidos. Juntas forman la carta final.
+- `TESORO_CUEVA`: lo que dice el cofre del fondo de la cueva.
 - `MASCOTAS_DEF`: nombres y colores de los gatitos y perritos.
 
 Para moderar, en la consola de Firebase, dentro de Realtime Database, pestaña Data, carpeta `mensajes`, se puede borrar cualquier mensaje. Desde la página nadie puede editar ni borrar los mensajes de otra persona.
