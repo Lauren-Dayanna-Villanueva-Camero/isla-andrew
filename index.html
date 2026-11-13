@@ -67,6 +67,18 @@
   #flash.ya{opacity:.85;transition:none}
   #velo{position:fixed;inset:0;background:#1f1b33;opacity:0;pointer-events:none;z-index:29;transition:opacity .3s}
   #velo.on{opacity:1}
+  .modal .tarjeta{overflow:auto}
+  #lienzo{display:block;width:min(100%,54vh,440px);height:auto;margin:6px auto 0;border-radius:16px;background:#fff;box-shadow:0 2px 10px rgba(120,90,150,.18);touch-action:none;cursor:crosshair;flex-shrink:0}
+  .pintar .opciones{justify-content:center;margin-top:10px;gap:6px}
+  .pintar .color{width:28px;height:28px;flex-shrink:0}
+  .herr{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .herr .chip{padding:4px 11px}
+  .pintar .grande{font-size:17px;padding:12px 10px}
+  @media (max-height:480px){ #lienzo{width:min(100%,40vh)} .pintar h2{font-size:18px} .pintar .opciones{margin-top:6px} }
+  .galeria{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;overflow:auto;margin-top:10px;min-height:80px}
+  .galeria figure{margin:0;background:#fff;border-radius:14px;padding:6px;box-shadow:0 2px 8px rgba(120,90,150,.12);text-align:center}
+  .galeria img{width:100%;aspect-ratio:1;border-radius:10px;display:block;object-fit:cover}
+  .galeria figcaption{font-weight:600;font-size:14px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* Panel de mensajes / carta */
   .modal{position:fixed;inset:0;background:rgba(90,70,110,.35);display:flex;align-items:center;justify-content:center;z-index:15;padding:14px}
   .modal .tarjeta{max-height:88vh;display:flex;flex-direction:column;text-align:left;background:rgba(255,255,255,.96)}
@@ -179,6 +191,28 @@
   </div>
 </div>
 
+<div id="panelPintar" class="modal hidden">
+  <div class="tarjeta pintar">
+    <h2>🎨 Pinta algo para Andrew</h2>
+    <canvas id="lienzo" width="512" height="512"></canvas>
+    <div class="opciones" id="pinceles"></div>
+    <div class="herr">
+      <button class="chip" type="button" data-tam="4">Fino</button><button class="chip sel" type="button" data-tam="10">Medio</button><button class="chip" type="button" data-tam="22">Grueso</button>
+      <button class="chip" type="button" id="borrador">🧽 Borrar</button><button class="chip" type="button" id="deshacer" title="Deshacer">↩️</button><button class="chip" type="button" id="limpiar" title="Empezar de nuevo">🗑️</button>
+    </div>
+    <div class="fila"><button class="grande" id="colgar" style="flex:1">🖼️ Colgar en la galería</button><button class="sec" id="guardarDibujo" title="Guardar en tu dispositivo">💾</button><button class="sec" id="cerrarPintar">Cerrar</button></div>
+    <div class="nota" id="estadoPintar" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<div id="panelGaleria" class="modal hidden">
+  <div class="tarjeta">
+    <h2>🖼️ Galería de dibujos</h2>
+    <div class="galeria" id="galeriaLista"></div>
+    <div class="fila"><button class="grande" id="irPintar" style="flex:1">🎨 Pintar uno</button><button class="sec" id="cerrarGaleria">Cerrar</button></div>
+  </div>
+</div>
+
 <div id="carta" class="modal hidden">
   <div class="tarjeta">
     <h2 id="cartaTitulo">🎁 ¡Encontraste todos los regalos!</h2>
@@ -203,6 +237,8 @@ const FRASES_REGALOS = [
 ];
 /* Lo que dice el cofre escondido al fondo de la cueva */
 const TESORO_CUEVA = "Llegaste hasta el fondo de la cueva, donde casi nadie llega.\n\nAquí está guardado lo más valioso de la isla: todos los buenos deseos de la gente que te quiere. Son tuyos, llévatelos todos.\n\nFeliz cumpleaños, " + CUMPLE + " 💎";
+/* Lo que dice el cofre de las rutas bajo la laguna */
+const TESORO_LAGUNA = "Juntaste las cuatro perlas y abriste el cofre del fondo de la laguna.\n\nComo tu primavera favorita, que este año venga lleno de colores: dibujos nuevos, música en el piano, cositas armadas con tus manos y gente bonita alrededor.\n\nFeliz cumpleaños, " + CUMPLE + " 🌷";
 
 if (!window.THREE) {
   document.body.innerHTML = '<p style="padding:30px;font-size:18px">No se pudo cargar el 3D. Revisa tu conexión y recarga la página 💗</p>';
@@ -250,10 +286,10 @@ let cieloMat;
 }
 const hemi = new THREE.HemisphereLight(0xfff4fb, 0xb9dcc0, 0.5); scene.add(hemi);
 const sol = new THREE.DirectionalLight(0xfff0e0, 0.5);
-sol.position.set(25, 45, 5); sol.target.position.set(0, 0, -13); scene.add(sol.target); // centrado entre la isla y el claro del norte
+sol.position.set(9, 45, 2); sol.target.position.set(-16, 0, -12); scene.add(sol.target); // centrado entre la isla y el claro del norte
 sol.castShadow = true;
 sol.shadow.mapSize.set(esTactil ? 1024 : 2048, esTactil ? 1024 : 2048);
-Object.assign(sol.shadow.camera, { left: -52, right: 52, top: 52, bottom: -52, near: 1, far: 130 });
+Object.assign(sol.shadow.camera, { left: -62, right: 62, top: 62, bottom: -62, near: 1, far: 140 });
 sol.shadow.bias = -0.0005;
 scene.add(sol);
 
@@ -469,41 +505,75 @@ function soltarFarolito(x, z, color){
 }
 
 /* ============ Mascotas ============ */
-function hacerMascota(tipo, color, color2){
+function hacerMascota(tipo, color, color2, op = {}){
   const g = new THREE.Group(); const cuerpo = new THREE.Group(); g.add(cuerpo);
-  const mc = M(color), m2 = M(color2);
-  const b = add(cuerpo, new THREE.SphereGeometry(0.42, 14, 12), mc, 0, 0.5, 0); b.scale.set(0.9, 0.8, 1.25);
+  const mc = M(color), m2 = M(color2), blanco = M(0xffffff);
+  const b = add(cuerpo, new THREE.SphereGeometry(0.42, 16, 12), mc, 0, 0.5, 0); b.scale.set(0.9, 0.8, 1.25);
+  if (op.manto) add(cuerpo, new THREE.SphereGeometry(0.43, 16, 10, 0, TAU, 0, Math.PI * 0.4), M(op.manto), 0, 0.52, -0.04).scale.set(0.93, 0.82, 1.22); // lomo de otro color
+  if (op.esponjoso){ // pelaje esponjoso
+    [[0.3, 0.55, 0.25], [-0.3, 0.55, 0.25], [0.3, 0.55, -0.25], [-0.3, 0.55, -0.25], [0, 0.78, 0], [0, 0.5, -0.5]].forEach(([x, y, z]) => add(cuerpo, new THREE.SphereGeometry(0.2, 10, 8), mc, x, y, z));
+  }
   const cab = new THREE.Group(); cab.position.set(0, 0.85, 0.48); cuerpo.add(cab);
-  add(cab, new THREE.SphereGeometry(0.34, 14, 12), mc, 0, 0, 0);
-  const ojo = M(0x3b2f45);
-  add(cab, new THREE.SphereGeometry(0.045, 8, 6), ojo, -0.12, 0.05, 0.3, { cast: false });
-  add(cab, new THREE.SphereGeometry(0.045, 8, 6), ojo, 0.12, 0.05, 0.3, { cast: false });
-  add(cab, new THREE.SphereGeometry(0.05, 8, 6), M(0xf49ab0), 0, -0.05, 0.33, { cast: false });
+  add(cab, new THREE.SphereGeometry(0.34, 16, 12), M(op.cabeza || color), 0, 0, 0);
+  if (op.mascara) add(cab, new THREE.SphereGeometry(0.352, 16, 10, 0, TAU, 0, Math.PI * 0.38), M(op.mascara), 0, 0.02, -0.04);
+  if (op.esponjoso) [-1, 1].forEach(s => add(cab, new THREE.SphereGeometry(0.13, 10, 8), mc, s * 0.27, -0.1, 0.08));
+  if (op.frente) add(cab, new THREE.SphereGeometry(0.07, 8, 6), M(op.hocico || 0xffffff), 0, 0.14, 0.29).scale.set(0.7, 2.2, 0.5); // manchita blanca en la frente
+  const ojo = M(0x3b2f45), ojoColor = op.ojos ? M(op.ojos) : ojo;
+  [-1, 1].forEach(s => {
+    add(cab, new THREE.SphereGeometry(0.05, 8, 6), ojoColor, s * 0.12, 0.05, 0.29, { cast: false });
+    if (op.ojos) add(cab, new THREE.SphereGeometry(0.025, 6, 6), ojo, s * 0.12, 0.05, 0.335, { cast: false });
+    add(cab, new THREE.SphereGeometry(0.016, 6, 6), blanco, s * 0.12 + 0.015, 0.075, 0.34, { cast: false });
+  });
   if (tipo === "gato"){
-    [-1, 1].forEach(s => { const o = add(cab, new THREE.ConeGeometry(0.11, 0.24, 4), m2, s * 0.18, 0.3, 0); o.rotation.z = -s * 0.25; });
-    const cola = add(cuerpo, new THREE.CylinderGeometry(0.05, 0.06, 0.8, 6), m2, 0, 0.85, -0.55); cola.rotation.x = -0.5;
+    add(cab, new THREE.SphereGeometry(0.045, 8, 6), M(0xf49ab0), 0, -0.05, 0.33, { cast: false });
+    [-1, 1].forEach(s => {
+      const o = add(cab, new THREE.ConeGeometry(0.11, 0.24, 4), m2, s * 0.18, 0.3, 0); o.rotation.z = -s * 0.25;
+      add(cab, new THREE.ConeGeometry(0.055, 0.13, 4), M(0xf9c6d3), s * 0.18, 0.29, 0.04).rotation.z = -s * 0.25;
+    });
+    const cola = add(cuerpo, new THREE.CylinderGeometry(0.05, 0.06, 0.8, 6), op.esponjoso ? mc : m2, 0, 0.85, -0.55); cola.rotation.x = -0.5;
+    if (op.esponjoso) cola.scale.set(2, 1, 2);
     g.userData.cola = cola;
   } else {
-    [-1, 1].forEach(s => { const o = add(cab, new THREE.SphereGeometry(0.12, 10, 8), m2, s * 0.3, 0.02, -0.02); o.scale.set(0.6, 1.4, 0.8); });
-    add(cab, new THREE.SphereGeometry(0.15, 10, 8), m2, 0, -0.08, 0.25).scale.set(1, 0.7, 1);
+    if (op.orejas === "punta") [-1, 1].forEach(s => { const o = add(cab, new THREE.ConeGeometry(0.12, 0.27, 4), M(op.mascara || color2), s * 0.17, 0.32, -0.03); o.rotation.z = -s * 0.22; add(cab, new THREE.ConeGeometry(0.06, 0.15, 4), M(0xf9d6de), s * 0.17, 0.3, 0.01).rotation.z = -s * 0.22; });
+    else [-1, 1].forEach(s => { const o = add(cab, new THREE.SphereGeometry(0.12, 10, 8), m2, s * 0.3, 0.02, -0.02); o.scale.set(0.6, 1.5, 0.8); });
+    add(cab, new THREE.SphereGeometry(0.15, 10, 8), M(op.hocico || color2), 0, -0.08, 0.25).scale.set(1, 0.7, 1);
     add(cab, new THREE.SphereGeometry(0.06, 8, 6), ojo, 0, -0.02, 0.4, { cast: false });
-    const cola = add(cuerpo, new THREE.SphereGeometry(0.1, 8, 6), m2, 0, 0.75, -0.55);
+    let cola;
+    if (op.cola === "esponjosa"){ cola = add(cuerpo, new THREE.SphereGeometry(0.12, 10, 8), M(op.manto || color), 0, 0.88, -0.55); cola.scale.set(0.85, 2.3, 0.85); cola.rotation.x = -0.55; }
+    else { cola = add(cuerpo, new THREE.SphereGeometry(0.08, 8, 6), M(op.manto || color2), 0, 0.82, -0.55); cola.scale.set(1, 2.4, 1); cola.rotation.x = -0.5; }
     g.userData.cola = cola;
   }
   const patas = [];
-  [[-0.2, 0.3], [0.2, 0.3], [-0.2, -0.3], [0.2, -0.3]].forEach(([x, z]) => patas.push(add(cuerpo, new THREE.CylinderGeometry(0.08, 0.08, 0.3, 6), mc, x, 0.15, z)));
+  [[-0.2, 0.3], [0.2, 0.3], [-0.2, -0.3], [0.2, -0.3]].forEach(([x, z]) => patas.push(add(cuerpo, new THREE.CylinderGeometry(0.08, 0.08, 0.3, 6), M(op.patas || color), x, 0.15, z)));
+  if (op.angel){ // alitas y aureola
+    const luzOro = new THREE.MeshStandardMaterial({ color: 0xfff0a8, emissive: 0xffe27a, emissiveIntensity: 0.9, roughness: 0.4 });
+    const halo = add(cab, new THREE.TorusGeometry(0.21, 0.035, 8, 26), luzOro, 0, 0.5, -0.04, { cast: false }); halo.rotation.x = Math.PI / 2;
+    const plumas = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6fb, emissiveIntensity: 0.35, roughness: 0.6 });
+    g.userData.alas = [-1, 1].map(s => {
+      const piv = new THREE.Group(); piv.position.set(s * 0.25, 0.78, -0.08); cuerpo.add(piv);
+      [[0.32, 0.1, 0.26], [0.26, 0.03, 0.06], [0.2, -0.04, -0.12]].forEach(([r, y, z], i) => { const p = add(piv, new THREE.SphereGeometry(r, 12, 10), plumas, s * (0.2 + i * 0.05), y + 0.12, z, { cast: false }); p.scale.set(0.3, 0.75, 1); });
+      return piv;
+    });
+    g.userData.halo = halo;
+  }
+  g.scale.setScalar(op.escala || 1);
   Object.assign(g.userData, { cuerpo, cab, patas });
   return g;
 }
+// Las mascotas de verdad: las de Andrew y las de Lau
 const MASCOTAS_DEF = [
-  ["gato", "Mishi", 0xfff3e6, 0xf2c6a0, -8, 16], ["gato", "Luna", 0xd9d4e6, 0xb7aed0, 18, -8], ["gato", "Canela", 0xf6d2a8, 0xe6ad7a, -20, -4],
-  ["gato", "Nube", 0xffffff, 0xf2d0dc, 8, -17], ["perro", "Toby", 0xf2dcc0, 0xc9a27e, 20, 4], ["perro", "Maní", 0xfaf2e6, 0xd8b896, -12, -16],
-  ["perro", "Copito", 0xffffff, 0xe8e0d4, 4, 19]
+  ["gato", "Gris", 0xc4c0d0, 0xa29eb4, -8, 16, {}],
+  ["gato", "Dominik", 0xffffff, 0xf3dde6, -44, 5, { esponjoso: true, escala: 1.08 }],
+  ["perro", "Niko", 0xfffaf2, 0xd9a273, 4, 19, { cabeza: 0xe6b184, hocico: 0xfffaf2, manto: 0x6e6476, frente: true, patas: 0xfffaf2, angel: true, tag: "Niko 🤍" }],
+  ["perro", "Max", 0xfbfbfd, 0x5a566c, 18, -8, { orejas: "punta", manto: 0x5a566c, mascara: 0x5a566c, hocico: 0xffffff, cola: "esponjosa", ojos: 0x6db3e6, escala: 1.15 }],
+  ["perro", "Zeus", 0xfbfbfd, 0x6c6680, 20, 4, { orejas: "punta", manto: 0x6c6680, mascara: 0x6c6680, hocico: 0xffffff, cola: "esponjosa", ojos: 0x6db3e6, escala: 1.22 }],
+  ["perro", "Boster", 0xffffff, 0xf2ece6, -12, -16, { orejas: "punta", hocico: 0xffffff, cola: "esponjosa", ojos: 0x6db3e6, escala: 1.15 }]
 ];
-const mascotas = MASCOTAS_DEF.map(([tipo, nombre, c1, c2, x, z]) => {
-  const g = hacerMascota(tipo, c1, c2); g.position.set(x, 0, z); scene.add(g);
-  const tag = etiqueta(nombre, 0.75); tag.position.y = 1.65; g.add(tag);
-  return { g, tipo, nombre, casa: { x, z }, obj: { x, z }, espera: rand(0, 3), acariciada: false, feliz: 0, rot: rand(0, TAU) };
+const mascotas = MASCOTAS_DEF.map(([tipo, nombre, c1, c2, x, z, op]) => {
+  const g = hacerMascota(tipo, c1, c2, op); g.position.set(x, 0, z); scene.add(g);
+  const tagTxt = op.tag || nombre, tagY = op.angel ? 2.0 : 1.65;
+  const tag = etiqueta(tagTxt, 0.75 / (op.escala || 1)); tag.position.y = tagY; g.add(tag);
+  return { g, tipo, nombre, tagTxt, tagY, angel: !!op.angel, casa: { x, z }, obj: { x, z }, espera: rand(0, 3), acariciada: false, feliz: 0, rot: rand(0, TAU) };
 });
 
 /* ============ Regalos escondidos ============ */
@@ -572,6 +642,7 @@ function arbol(x, z, s, tipo, rnd){
     const a = rnd() * TAU, r = 15.6 + Math.sqrt(rnd()) * 14.6, x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (Math.abs(x) < 6 && z > 11) continue; // la entrada queda libre
     if (Math.abs(x) < 4 && z < -12) continue; // y el camino al claro del norte
+    if (x < -12 && Math.abs(z - 1) < 4.2) continue; // y el camino al jardín de primavera
     if (CLAROS.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr)) continue;
     if (arboles.some(p => Math.hypot(x - p.x, z - p.z) < 3.3)) continue;
     const u = rnd();
@@ -583,6 +654,7 @@ function lugarLibre(rnd, rMin, rMax){
   for (let k = 0; k < 60; k++){
     const a = rnd() * TAU, r = rMin + Math.sqrt(rnd()) * (rMax - rMin), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (Math.abs(x) < 3.2 && ((z > 11 && z < 28) || z < -12)) continue;
+    if (x < -14 && Math.abs(z - 1) < 2.6) continue;
     if (CLAROS.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr * 0.62)) continue;
     return [x, z];
   }
@@ -719,7 +791,8 @@ const paleta = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, new
 const DIA = paleta({ top: 0xb9d8f2, mid: 0xf3dcef, bot: 0xfde7d6, niebla: 0xf3e2ee, hemiC: 0xfff4fb, hemiS: 0xb9dcc0, sol: 0xfff0e0, agua: 0xa9dcef });
 const NOCHE = paleta({ top: 0x40427e, mid: 0x9484c0, bot: 0xeeb4c8, niebla: 0x9a8ec2, hemiC: 0xb4b8f4, hemiS: 0x7484a8, sol: 0xb0b8ff, agua: 0x7088c4 });
 const EN_CUEVA = paleta({ niebla: 0x1f1b33, hemiC: 0x9c9ce0, hemiS: 0x4c4670 });
-let modoCielo = "auto", noche = -1;
+const EN_AGUA = paleta({ niebla: 0x3a86bc, hemiC: 0xbfe6ff, hemiS: 0x3f78a8 });
+let modoCielo = "auto", noche = -1, vistoJardin = false;
 function aplicarCielo(dt){
   let obj;
   if (modoCielo === "auto"){
@@ -729,7 +802,7 @@ function aplicarCielo(dt){
   const n = noche < 0 ? obj : Math.abs(noche - obj) < 0.003 ? obj : lerp(noche, obj, Math.min(1, dt * 1.2));
   const cObj = enCueva ? 1 : 0, c = Math.abs(cuevaF - cObj) < 0.01 ? cObj : lerp(cuevaF, cObj, Math.min(1, dt * 3.5));
   if (n === noche && c === cuevaF) return;
-  cuevaF = c;
+  cuevaF = c; const IN = interior === "agua" ? EN_AGUA : EN_CUEVA;
   if (jugando && modoCielo === "auto" && noche >= 0 && !enCueva){
     if (noche < 0.5 && n >= 0.5) toast("🌙 Anochece en la isla. Mira las luciérnagas ✨", 4000);
     if (noche >= 0.5 && n < 0.5) toast("🌤️ Amanece en la isla", 3000);
@@ -737,10 +810,11 @@ function aplicarCielo(dt){
   noche = n;
   const u = cieloMat.uniforms;
   u.top.value.copy(DIA.top).lerp(NOCHE.top, n); u.mid.value.copy(DIA.mid).lerp(NOCHE.mid, n); u.bot.value.copy(DIA.bot).lerp(NOCHE.bot, n);
-  scene.fog.color.copy(DIA.niebla).lerp(NOCHE.niebla, n).lerp(EN_CUEVA.niebla, c); scene.fog.near = lerp(55, 10, c); scene.fog.far = lerp(130, 64, c);
-  hemi.color.copy(DIA.hemiC).lerp(NOCHE.hemiC, n).lerp(EN_CUEVA.hemiC, c); hemi.groundColor.copy(DIA.hemiS).lerp(NOCHE.hemiS, n).lerp(EN_CUEVA.hemiS, c); hemi.intensity = lerp(lerp(0.5, 0.36, n), 0.5, c);
+  scene.fog.color.copy(DIA.niebla).lerp(NOCHE.niebla, n).lerp(IN.niebla, c); scene.fog.near = lerp(55, interior === "agua" ? 3 : 10, c); scene.fog.far = lerp(130, interior === "agua" ? 46 : 64, c);
+  hemi.color.copy(DIA.hemiC).lerp(NOCHE.hemiC, n).lerp(IN.hemiC, c); hemi.groundColor.copy(DIA.hemiS).lerp(NOCHE.hemiS, n).lerp(IN.hemiS, c); hemi.intensity = lerp(lerp(0.5, 0.36, n), 0.5, c);
   sol.color.copy(DIA.sol).lerp(NOCHE.sol, n); sol.intensity = lerp(lerp(0.5, 0.2, n), 0.04, c);
-  luzCueva.intensity = c * 1.2; cuevaG.visible = c > 0.01;
+  luzCueva.intensity = interior === "cueva" ? c * 1.2 : 0; luzAgua.intensity = interior === "agua" ? c * 1.1 : 0;
+  cuevaG.visible = c > 0.01 && interior === "cueva"; aguaG.visible = c > 0.01 && interior === "agua";
   agua.material.color.copy(DIA.agua).lerp(NOCHE.agua, n);
   estrellas.material.opacity = n * 0.95; estrellas.visible = n > 0.01;
   luna.material.opacity = n; luna.visible = n > 0.01;
@@ -773,11 +847,11 @@ function lanzarFuegos(remoto){
 /* ============ Zona nueva: el claro del norte y la cueva ============ */
 // Por dónde se puede caminar: círculos unidos. La cueva queda lejos, en su propio rincón del mundo.
 const LOBULO = { x: 0, z: -42, r: 17 }, COLINA = { x: 0, z: -52 }, CUEVA = { x: 0, z: 240 }, CAMPO = { x: 0, z: -38, r: 7.5 };
-const ZONAS = { isla: [[0, 0, RADIO_ISLA], [LOBULO.x, LOBULO.z, LOBULO.r]], cueva: [] };
-const enLaCueva = z => z > 150;
+const ZONAS = { isla: [[0, 0, RADIO_ISLA], [LOBULO.x, LOBULO.z, LOBULO.r]], cueva: [], agua: [] };
+const zonaDe = (x, z) => z > 150 ? "cueva" : x > 150 ? "agua" : "isla";
 function limitar(p){
-  const zona = enLaCueva(p.z) ? ZONAS.cueva : ZONAS.isla; let mejor = null, dm = 1e9;
-  for (const c of zona){ const d = Math.hypot(p.x - c[0], p.z - c[1]) - c[2]; if (d <= 0) return; if (d < dm){ dm = d; mejor = c; } }
+  const lista = ZONAS[zonaDe(p.x, p.z)]; let mejor = null, dm = 1e9;
+  for (const c of lista){ const d = Math.hypot(p.x - c[0], p.z - c[1]) - c[2]; if (d <= 0) return; if (d < dm){ dm = d; mejor = c; } }
   const d = Math.hypot(p.x - mejor[0], p.z - mejor[1]) || 1; p.x = mejor[0] + (p.x - mejor[0]) / d * mejor[2]; p.z = mejor[1] + (p.z - mejor[1]) / d * mejor[2];
 }
 add(scene, new THREE.CylinderGeometry(21, 23, 1.2, 56), M(0xf3d9a8), LOBULO.x, -0.85, LOBULO.z, { cast: false });
@@ -898,13 +972,203 @@ add(scene, new THREE.BoxGeometry(3, 0.14, 1.3), M(0xe0b893), LAGO.x + 4.1, 0.2, 
 const boya = add(scene, new THREE.SphereGeometry(0.16, 10, 8), M(0xff8fa8), LAGO.x + 1.7, 0.1, LAGO.z, { cast: false }); boya.visible = false;
 // aro de la carrera
 const aro = add(scene, new THREE.TorusGeometry(1.6, 0.13, 8, 26), new THREE.MeshBasicMaterial({ color: 0xffd76a }), 0, 1.6, 0, { cast: false, recv: false }); aro.visible = false;
-let enCueva = false, cuevaF = 0, viajando = false, saltoCamara = false;
+let zona = "isla", interior = "cueva", enCueva = false, cuevaF = 0, viajando = false, saltoCamara = false;
 function viajar(x, z, rot){
   if (viajando) return; viajando = true; const v = $("#velo"); v.classList.add("on");
   setTimeout(() => { yo.pos.set(x, 0, z); yo.rot = rot; yo.vy = 0; yo.sentado = false; camYaw = rot + Math.PI; saltoCamara = true; v.classList.remove("on"); viajando = false; }, 330);
 }
 const entrarCueva = () => { viajar(CUEVA.x, CUEVA.z + 15, Math.PI); setTimeout(() => toast("🕳️ La cueva de los cristales. Dicen que al fondo hay un tesoro…", 4200), 600); };
 const salirCueva = () => viajar(BOCA.x, BOCA.z + 1.6, 0);
+
+/* ============ Jardín de primavera (al oeste) ============ */
+const PRIMAVERA = { x: -47, z: 1, r: 18 };
+const PIANO = { x: -47, z: -6, kw: 1.3, n: 11 }, CABALLETE = { x: -40, z: 9 }, GALERIA = { x: -49.5, z: 12.5 }, LAGUNA = { x: -58, z: 5, r: 3.4 };
+const MUELLE_LAGUNA = { x: LAGUNA.x + LAGUNA.r + 0.9, z: LAGUNA.z + 0.6 };
+ZONAS.isla.push([PRIMAVERA.x, PRIMAVERA.z, PRIMAVERA.r]);
+add(scene, new THREE.CylinderGeometry(21.5, 23.5, 1.2, 56), M(0xf3d9a8), PRIMAVERA.x, -0.86, PRIMAVERA.z, { cast: false });
+add(scene, new THREE.CylinderGeometry(19.2, 20.6, 1.4, 56), M(0x9fd890), PRIMAVERA.x, -0.71, PRIMAVERA.z, { cast: false });
+for (let i = 0; i < 9; i++) add(scene, new THREE.CylinderGeometry(0.75, 0.75, 0.08, 14), caminoMat, -20.5 - i * 1.65, 0.01, 1 + Math.sin(i * 2.3) * 0.45, { cast: false }).scale.x = 0.8;
+// arco de flores en la entrada
+{
+  const arco = new THREE.Group(); arco.position.set(-31.5, 0, 1); arco.rotation.y = Math.PI / 2; scene.add(arco);
+  add(arco, new THREE.TorusGeometry(2.7, 0.16, 8, 30, Math.PI), M(0xb8e0a8), 0, 0, 0);
+  const cols = [0xffb3cc, 0xffffff, 0xd9c2ff, 0xfff0a0, 0xffc8a8];
+  for (let i = 0; i <= 16; i++){ const a = i / 16 * Math.PI; add(arco, new THREE.SphereGeometry(0.2 + (i % 3) * 0.05, 10, 8), M(cols[i % 5]), Math.cos(a) * 2.7, Math.sin(a) * 2.7, (i % 2 ? 0.12 : -0.12)); }
+  const tag = etiqueta("🌸 Jardín de primavera", 1.4); tag.position.set(0, 3.45, 0); arco.add(tag);
+  colliders.push({ x: -31.5, z: 1 - 2.7, r: 0.3 }, { x: -31.5, z: 1 + 2.7, r: 0.3 });
+  registrarOcultable(arco, new THREE.Vector3(-31.5, 1.6, 1), 2.6);
+}
+// piano gigante en el piso: cada tecla suena al pisarla
+const NOTAS_PIANO = [392, 440, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99, 880, 987.77, 1046.5];
+const NOMBRES_NOTAS = ["Sol", "La", "Si", "Do", "Re", "Mi", "Fa", "Sol", "La", "Si", "Do"];
+const teclasPiano = [];
+const PIANO_X0 = PIANO.x - PIANO.kw * PIANO.n / 2;
+{
+  add(scene, new THREE.BoxGeometry(PIANO.kw * PIANO.n + 0.7, 0.06, 4.7), M(0x5b4a6b), PIANO.x, 0.03, PIANO.z, { cast: false });
+  const cols = [0xffc4d6, 0xffd9b8, 0xfff0b0, 0xd8f2b8, 0xbfecd8, 0xbfe2f8, 0xd4ccff, 0xf2c8f0, 0xffc4d6, 0xffd9b8, 0xfff0b0];
+  for (let i = 0; i < PIANO.n; i++){
+    const color = new THREE.Color(cols[i]).lerp(new THREE.Color(0xffffff), 0.35);
+    const mat = new THREE.MeshStandardMaterial({ color, emissive: cols[i], emissiveIntensity: 0, roughness: 0.5 });
+    const k = add(scene, new THREE.BoxGeometry(PIANO.kw - 0.08, 0.1, 4.2), mat, PIANO_X0 + (i + 0.5) * PIANO.kw, 0.08, PIANO.z, { cast: false });
+    const etq = etiqueta(NOMBRES_NOTAS[i], 0.7); etq.position.set(k.position.x, 0.45, PIANO.z + 1.6); scene.add(etq);
+    teclasPiano.push({ k, mat, luz: 0, baja: 0 });
+  }
+  [0, 1, 3, 4, 6, 7, 8].forEach(i => add(scene, new THREE.BoxGeometry(0.62, 0.13, 2.1), M(0x5b4a6b), PIANO_X0 + (i + 1) * PIANO.kw, 0.09, PIANO.z - 1.05, { cast: false }));
+}
+// caballete para pintar
+{
+  const g = new THREE.Group(); g.position.set(CABALLETE.x, 0, CABALLETE.z); g.rotation.y = Math.atan2(PRIMAVERA.x - CABALLETE.x, PRIMAVERA.z - CABALLETE.z); scene.add(g);
+  [[-0.55, 0.12, 0.2], [0.55, 0.12, -0.2]].forEach(([x, rz]) => { const p = add(g, new THREE.CylinderGeometry(0.06, 0.07, 2.6, 6), M(0xc9a27e), x, 1.25, 0); p.rotation.z = rz; p.rotation.x = -0.12; });
+  add(g, new THREE.CylinderGeometry(0.06, 0.07, 2.5, 6), M(0xc9a27e), 0, 1.2, -0.45).rotation.x = 0.35;
+  add(g, new THREE.BoxGeometry(1.5, 0.08, 0.25), M(0xc9a27e), 0, 0.9, 0.12);
+  const c = document.createElement("canvas"); c.width = c.height = 256; const x = c.getContext("2d");
+  x.fillStyle = "#fffaf2"; x.fillRect(0, 0, 256, 256);
+  [["#ffb3cc", 80, 90, 46], ["#bfe2f8", 170, 80, 38], ["#fff0a0", 120, 170, 52], ["#c8f0c0", 190, 185, 30]].forEach(([col, cx, cy, r]) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill(); });
+  x.font = "90px serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("🎨", 128, 132);
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding;
+  add(g, new THREE.BoxGeometry(1.4, 1.4, 0.06), M(0xfff6ea), 0, 1.65, 0.08);
+  add(g, new THREE.PlaneGeometry(1.32, 1.32), new THREE.MeshBasicMaterial({ map: tex }), 0, 1.65, 0.115, { cast: false });
+  colliders.push({ x: CABALLETE.x, z: CABALLETE.z, r: 0.6 });
+}
+// galería de dibujos
+const galeria3D = new THREE.Group(); galeria3D.position.set(GALERIA.x, 0, GALERIA.z); galeria3D.rotation.y = Math.atan2(PRIMAVERA.x - GALERIA.x, PRIMAVERA.z - GALERIA.z); scene.add(galeria3D);
+add(galeria3D, new THREE.CylinderGeometry(0.15, 0.15, 3.9, 8), M(0xc9a27e), -3.1, 1.95, 0);
+add(galeria3D, new THREE.CylinderGeometry(0.15, 0.15, 3.9, 8), M(0xc9a27e), 3.1, 1.95, 0);
+add(galeria3D, new THREE.BoxGeometry(6.3, 3.5, 0.1), M(0xd9b48f), 0, 2.35, 0);
+const galeriaCara = add(galeria3D, new THREE.PlaneGeometry(6.1, 3.3), new THREE.MeshBasicMaterial(), 0, 2.35, 0.06, { cast: false });
+add(galeria3D, new THREE.ConeGeometry(4.4, 0.8, 4, 1), M(0xf4a9bf), 0, 4.45, 0).rotation.y = Math.PI / 4;
+{ const r = galeria3D.rotation.y; for (const s of [-1, 1]) colliders.push({ x: GALERIA.x + Math.cos(r) * 3.1 * s, z: GALERIA.z - Math.sin(r) * 3.1 * s, r: 0.3 }); }
+// laguna con nenúfares (por aquí se baja a las rutas bajo el agua)
+{
+  add(scene, new THREE.CircleGeometry(LAGUNA.r, 36), new THREE.MeshStandardMaterial({ color: 0x8fd0ec, roughness: 0.2 }), LAGUNA.x, 0.03, LAGUNA.z, { cast: false }).rotation.x = -Math.PI / 2;
+  add(scene, new THREE.CircleGeometry(1.2, 24), new THREE.MeshBasicMaterial({ color: 0x3f86b4 }), LAGUNA.x, 0.035, LAGUNA.z, { cast: false, recv: false }).rotation.x = -Math.PI / 2;
+  add(scene, new THREE.TorusGeometry(LAGUNA.r + 0.1, 0.28, 8, 36), M(0xe6dccf), LAGUNA.x, 0.05, LAGUNA.z).rotation.x = Math.PI / 2;
+  for (let i = 0; i < 6; i++){
+    const a = i * 1.05 + 0.4, r = 1.8 + (i % 2) * 0.8;
+    const n = add(scene, new THREE.CircleGeometry(0.45, 16, 0, TAU * 0.85), M(0x9fd59a), LAGUNA.x + Math.cos(a) * r, 0.06, LAGUNA.z + Math.sin(a) * r, { cast: false }); n.rotation.x = -Math.PI / 2; n.rotation.z = a;
+    if (i % 2 === 0) add(scene, new THREE.SphereGeometry(0.15, 8, 6), M([0xffc4d6, 0xffffff, 0xe0d0ff][i % 3]), n.position.x, 0.15, n.position.z);
+  }
+  add(scene, new THREE.BoxGeometry(1.8, 0.14, 1.1), M(0xe0b893), LAGUNA.x + LAGUNA.r + 0.2, 0.2, LAGUNA.z + 0.6);
+  colliders.push({ x: LAGUNA.x, z: LAGUNA.z, r: LAGUNA.r - 0.1 });
+}
+// árboles en flor, tulipanes y pétalos
+{
+  const rnd = seeded(515), puestos = [];
+  const libre = (x, z, m) => !(Math.abs(x - PIANO.x) < PIANO.kw * PIANO.n / 2 + m && Math.abs(z - PIANO.z) < 2.4 + m)
+    && Math.hypot(x - LAGUNA.x, z - LAGUNA.z) > LAGUNA.r + 0.6 + m && Math.hypot(x - CABALLETE.x, z - CABALLETE.z) > 1 + m
+    && Math.hypot(x - GALERIA.x, z - GALERIA.z) > 3.4 + m && Math.hypot(x - MUELLE_LAGUNA.x, z - MUELLE_LAGUNA.z) > 0.8 + m && !(x > -40 && Math.abs(z - 1) < 2 + m);
+  let intentos = 0;
+  while (puestos.length < 15 && intentos++ < 4000){
+    const a = rnd() * TAU, r = 11.5 + rnd() * 5.2, x = PRIMAVERA.x + Math.cos(a) * r, z = PRIMAVERA.z + Math.sin(a) * r;
+    if (x > -34 || !libre(x, z, 2.2) || Math.hypot(x, z) < 33.5 || puestos.some(p => Math.hypot(x - p[0], z - p[1]) < 3.6)) continue;
+    puestos.push([x, z]); arbol(x, z, 0.8 + rnd() * 0.55, rnd() < 0.8 ? "flor" : "hoja", rnd);
+  }
+  const lugar = () => { for (let k = 0; k < 40; k++){ const a = rnd() * TAU, r = Math.sqrt(rnd()) * 17, x = PRIMAVERA.x + Math.cos(a) * r, z = PRIMAVERA.z + Math.sin(a) * r; if (libre(x, z, 0.4)) return [x, z]; } return [PRIMAVERA.x, PRIMAVERA.z + 16]; };
+  const tulipanes = Array.from({ length: 190 }, () => [...lugar(), 0.8 + rnd() * 0.5]);
+  instancias(tulipanes.length, new THREE.CylinderGeometry(0.03, 0.03, 0.5, 5), [0x7cc48e], rnd, (d, i) => { const [x, z, s] = tulipanes[i]; d.position.set(x, 0.25 * s, z); d.scale.setScalar(s); });
+  instancias(tulipanes.length, new THREE.SphereGeometry(0.13, 8, 6), [0xff9fbf, 0xffc4d6, 0xfff09a, 0xd9b8ff, 0xffb894, 0xffffff, 0xa8d8ff], rnd, (d, i) => { const [x, z, s] = tulipanes[i]; d.position.set(x, 0.55 * s, z); d.scale.set(s, s * 1.35, s); }, { mat: { flatShading: false } });
+  instancias(130, new THREE.ConeGeometry(0.1, 0.45, 4), [0x7cc884, 0x94d68e, 0x70bf8c], rnd, d => { const [x, z] = lugar(), s = 0.7 + rnd() * 0.8; d.position.set(x, 0.2 * s, z); d.scale.setScalar(s); d.rotation.y = rnd() * 3; });
+  instancias(36, new THREE.IcosahedronGeometry(0.55, 1), [0x9ad6a4, 0xf6b4cc, 0xb4e0a8, 0xe8c4f2], rnd, d => {
+    let x, z, k = 0; do { const a = rnd() * TAU, r = 14 + rnd() * 3.6; x = PRIMAVERA.x + Math.cos(a) * r; z = PRIMAVERA.z + Math.sin(a) * r; } while ((x > -36 || !libre(x, z, 1)) && k++ < 30);
+    const s = 0.7 + rnd() * 0.7; d.position.set(x, 0.32 * s, z); d.scale.set(s, s * 0.8, s); d.rotation.set(rnd() * 3, rnd() * 3, 0);
+  }, { sombra: true });
+}
+const PETALOS = Array.from({ length: 110 }, () => { const a = rand(0, TAU), r = Math.sqrt(Math.random()) * 17; return { x: PRIMAVERA.x + Math.cos(a) * r, y: rand(0, 9), z: PRIMAVERA.z + Math.sin(a) * r, v: rand(0.35, 0.8), f: rand(0, 9) }; });
+const petalos = puntos(PETALOS.length, i => [PETALOS[i].x, PETALOS[i].y, PETALOS[i].z], { color: 0xffb8d0, size: 0.24, opacity: 0.95 });
+{
+  const geoAla = new THREE.CircleGeometry(0.13, 8);
+  for (let i = 0; i < 7; i++){
+    const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: [0xffd0de, 0xfff0b0, 0xe0d0ff, 0xc8f0dc][i % 4], side: THREE.DoubleSide, transparent: true });
+    const alas = [-1, 1].map(s => { const piv = new THREE.Group(), w = new THREE.Mesh(geoAla, mat); w.rotation.x = -Math.PI / 2; w.position.x = s * 0.12; w.scale.set(1, 1.25, 1); piv.add(w); g.add(piv); return piv; });
+    const a = rand(0, TAU), r = rand(2, 13);
+    g.userData = { cx: PRIMAVERA.x + Math.cos(a) * r, cz: PRIMAVERA.z + Math.sin(a) * r, r: rand(1.2, 3), v: rand(0.3, 0.6) * (i % 2 ? 1 : -1), f: rand(0, 9), y: rand(0.9, 2.2), alas, mat };
+    scene.add(g); mariposas.push(g);
+  }
+}
+const POSTE_PIANO = poste(PIANO.x + 5.2, PIANO.z + 3.4, "🎹");
+
+/* ============ Las rutas bajo la laguna ============ */
+const AGUA = { x: 240, z: 0 };
+const aguaG = new THREE.Group(); aguaG.position.set(AGUA.x, 0, AGUA.z); aguaG.visible = false; scene.add(aguaG);
+const SALAS_AGUA = { entrada: [0, 14, 5], cruce: [0, 1, 4.5], izq: [-14, 4, 3.5], der: [12, 2, 4], derFin: [19, 12, 3.2], sur: [-5, -12, 4.5], suroeste: [-18, -10, 3.4], sureste: [8, -15, 4], este: [19, -19, 3.2], tesoro: [4, -28, 5] };
+const SUPERFICIE = { x: AGUA.x, z: AGUA.z + 17 }, COFRE_AGUA = { x: AGUA.x + 4, z: AGUA.z - 31 };
+const PERLAS = [], ALGAS = [], PECES_AGUA = [];
+let luzAgua, burbujas, tapaAgua, cofreAguaAbierto = false, perlas = 0;
+function hacerCofre(padre, x, z, rot){
+  const cofre = new THREE.Group(); cofre.position.set(x, 0, z); cofre.rotation.y = rot; padre.add(cofre);
+  const oro = M(0xffd76a, { emissive: 0xffc040, emissiveIntensity: 0.35 });
+  add(cofre, new THREE.BoxGeometry(1.3, 0.7, 0.85), M(0xc98f5a), 0, 0.35, 0, { cast: false });
+  add(cofre, new THREE.BoxGeometry(1.36, 0.12, 0.9), oro, 0, 0.68, 0, { cast: false });
+  const tapa = new THREE.Group(); tapa.position.set(0, 0.74, -0.42); cofre.add(tapa);
+  add(tapa, new THREE.CylinderGeometry(0.43, 0.43, 1.3, 14, 1, false, 0, Math.PI), M(0xc98f5a), 0, 0, 0.42, { cast: false }).rotation.set(0, 0, Math.PI / 2);
+  add(cofre, new THREE.BoxGeometry(0.2, 0.26, 0.08), oro, 0, 0.6, 0.45, { cast: false });
+  return tapa;
+}
+{
+  const rnd = seeded(4242), circ = Object.values(SALAS_AGUA).map(c => c.slice()), S = SALAS_AGUA;
+  const tunel = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 1.6); for (let k = 0; k <= n; k++) circ.push([lerp(a[0], b[0], k / n), lerp(a[1], b[1], k / n), 2.2]); };
+  [["entrada", "cruce"], ["cruce", "izq"], ["cruce", "der"], ["der", "derFin"], ["cruce", "sur"], ["sur", "suroeste"], ["sur", "sureste"], ["sureste", "este"], ["sureste", "tesoro"]].forEach(([a, b]) => tunel(S[a], S[b]));
+  ZONAS.agua = circ.map(([x, z, r]) => [x + AGUA.x, z + AGUA.z, r]);
+  add(aguaG, new THREE.CircleGeometry(50, 40), M(0xd6c9a8, { roughness: 1 }), 0, 0, 0, { cast: false }).rotation.x = -Math.PI / 2;
+  add(aguaG, new THREE.SphereGeometry(48, 24, 14), new THREE.MeshBasicMaterial({ color: 0x2f78a8, side: THREE.BackSide, fog: false }), 0, 0, 0, { cast: false, recv: false });
+  const borde = [];
+  for (const [cx, cz, cr] of circ){
+    const n = Math.max(6, Math.round(TAU * cr / 1.2)), a0 = rnd() * TAU;
+    for (let i = 0; i < n; i++){
+      const a = a0 + i / n * TAU, x = cx + Math.cos(a) * (cr + 0.8), z = cz + Math.sin(a) * (cr + 0.8);
+      if (circ.some(([ox, oz, or]) => Math.hypot(x - ox, z - oz) < or + 0.6) || borde.some(b => Math.hypot(x - b[0], z - b[1]) < 0.85)) continue;
+      borde.push([x, z, Math.cos(a), Math.sin(a)]);
+    }
+  }
+  const P = { padre: aguaG };
+  instancias(borde.length, new THREE.DodecahedronGeometry(1, 0), [0x6fb0c4, 0x86a6d8, 0x9bc8c0, 0x7c9cc8, 0xe6a8c4], rnd, (d, i) => {
+    const s = 0.9 + rnd() * 0.5, h = s * (0.8 + rnd() * 0.7); d.position.set(borde[i][0], h * 0.45, borde[i][1]); d.scale.set(s, h, s); d.rotation.y = rnd() * 3;
+  }, P);
+  // corales, conchitas y algas
+  const cerca = () => { const b = borde[Math.floor(rnd() * borde.length)], o = 0.6 + rnd() * 0.6; return [b[0] - b[2] * o + (rnd() - 0.5) * 0.6, b[1] - b[3] * o + (rnd() - 0.5) * 0.6]; };
+  for (let i = 0; i < 22; i++){
+    const [x, z] = cerca(), col = [0xff9fbf, 0xffb894, 0xd9b8ff, 0xfff09a, 0x9fe8d8][i % 5], piezas = [];
+    for (let k = 0; k < 5; k++){ const a = rnd() * TAU, inc = 0.3 + rnd() * 0.5, h = 0.6 + rnd() * 0.8; piezas.push([new THREE.CylinderGeometry(0.06, 0.1, h, 6), col, [Math.sin(inc) * Math.cos(a) * h * 0.5, h * 0.45, Math.sin(inc) * Math.sin(a) * h * 0.5], 1, [Math.sin(a) * inc, 0, -Math.cos(a) * inc]]); piezas.push([new THREE.SphereGeometry(0.11, 8, 6), col, [Math.sin(inc) * Math.cos(a) * h, h * 0.92, Math.sin(inc) * Math.sin(a) * h]]); }
+    const m = new THREE.Mesh(fundir(piezas), matVC); m.position.set(x, 0, z); aguaG.add(m);
+  }
+  const conchas = Array.from({ length: 34 }, cerca);
+  instancias(conchas.length, new THREE.SphereGeometry(0.22, 10, 6, 0, TAU, 0, Math.PI / 2), [0xffd0dc, 0xfff0d8, 0xe8d8ff, 0xffe0c0], rnd, (d, i) => { d.position.set(conchas[i][0], 0.02, conchas[i][1]); d.scale.set(1, 0.5, 1.2); d.rotation.y = rnd() * 3; }, { mat: { flatShading: false }, padre: aguaG });
+  const matAlga = new THREE.MeshStandardMaterial({ color: 0x7fcf9a, roughness: 0.8, flatShading: true });
+  for (let i = 0; i < 40; i++){
+    const [x, z] = cerca(), h = 1.6 + rnd() * 2.2, g = new THREE.Group(); g.position.set(x, 0, z); aguaG.add(g);
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.16, h, 5), matAlga); m.position.y = h / 2; g.add(m);
+    ALGAS.push({ g, f: rnd() * 9 });
+  }
+  // peces de colores
+  const salas = Object.values(SALAS_AGUA);
+  for (let i = 0; i < 16; i++){
+    const s = emojiSprite(["🐟", "🐠", "🐡", "🐠"][i % 4]); s.scale.set(0.9, 0.9, 1); aguaG.add(s);
+    const c = salas[i % salas.length]; PECES_AGUA.push({ s, cx: c[0], cz: c[1], r: c[2] * (0.4 + rnd() * 0.5), y: 1.3 + rnd() * 2.2, v: (0.4 + rnd() * 0.5) * (i % 2 ? 1 : -1), f: rnd() * 9 });
+  }
+  burbujas = puntos(140, () => { const c = circ[Math.floor(rnd() * circ.length)]; return [c[0] + (rnd() - 0.5) * c[2], rnd() * 10, c[1] + (rnd() - 0.5) * c[2]]; }, { color: 0xe8fbff, size: 0.28, fog: false, opacity: 0.8 }, aguaG);
+  // rayo de luz que marca la salida a la superficie
+  add(aguaG, new THREE.CylinderGeometry(1.1, 1.9, 16, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xfffbe0, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, fog: false }), 0, 8, 17, { cast: false, recv: false });
+  add(aguaG, new THREE.CircleGeometry(2.1, 24), new THREE.MeshBasicMaterial({ color: 0xfff6c8, transparent: true, opacity: 0.5, depthWrite: false }), 0, 0.02, 17, { cast: false, recv: false }).rotation.x = -Math.PI / 2;
+  luzAgua = new THREE.PointLight(0xa8e8ff, 0, 70); luzAgua.position.set(0, 12, 0); aguaG.add(luzAgua);
+  // perlas en los rincones sin salida
+  ["izq", "derFin", "suroeste", "este"].forEach(k => {
+    const [x, z] = S[k], g = new THREE.Group(); g.position.set(x, 0, z); aguaG.add(g);
+    add(g, new THREE.SphereGeometry(0.5, 14, 8, 0, TAU, 0, Math.PI / 2), M(0xffc4d6), 0, 0.02, 0, { cast: false }).rotation.x = Math.PI;
+    add(g, new THREE.SphereGeometry(0.5, 14, 8, 0, TAU, 0, Math.PI / 2), M(0xffd6e2), 0, 0.05, -0.35, { cast: false }).rotation.x = -1.0;
+    const perla = add(g, new THREE.SphereGeometry(0.2, 14, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2fa, emissiveIntensity: 0.6, roughness: 0.2 }), 0, 0.25, 0, { cast: false });
+    PERLAS.push({ perla, x: AGUA.x + x, z: AGUA.z + z, tomada: false });
+  });
+  tapaAgua = hacerCofre(aguaG, COFRE_AGUA.x - AGUA.x, COFRE_AGUA.z - AGUA.z, 0);
+  colliders.push({ x: COFRE_AGUA.x, z: COFRE_AGUA.z, r: 0.85 });
+}
+const bucear = () => { viajar(AGUA.x, AGUA.z + 15, Math.PI); setTimeout(() => toast("🫧 Bajo la laguna hay rutas escondidas. El cofre del fondo necesita 4 perlas…", 4600), 600); };
+const subir = () => viajar(MUELLE_LAGUNA.x + 0.6, MUELLE_LAGUNA.z, Math.PI / 2);
+function abrirCofreAgua(){
+  if (cofreAguaAbierto) return;
+  if (perlas < PERLAS.length){ toast(`🦪 El cofre tiene ${PERLAS.length} huequitos con forma de perla (${perlas}/${PERLAS.length}). Busca por las otras rutas`, 4200); return; }
+  cofreAguaAbierto = true; campanita(); confeti(COFRE_AGUA.x, 1.5, COFRE_AGUA.z, 90, [0xbfe8ff, 0xffffff, 0xffc4d6, 0xfff0b0]);
+  anunciar("🐚 ¡Encontré el tesoro de la laguna!"); setTimeout(() => mostrarCarta("🐚 ¡Encontraste el tesoro de la laguna!", TESORO_LAGUNA), 1000);
+}
 
 /* ============ Muñequitos ============ */
 const COLORES = ["#f7b7c8", "#cdb8f0", "#b8e6d0", "#bfe0f5", "#fde3a7", "#f9cfb0", "#e8e0d4", "#d8f0b8"];
@@ -1054,9 +1318,9 @@ function confeti(x, y, z, n = 70, cols = [0xf7b7c8, 0xcdb8f0, 0xb8e6d0, 0xfde3a7
     scene.add(m); particulas.push(m);
   }
 }
-function corazones(obj){
+function corazones(obj, e = "💗"){
   for (let i = 0; i < 4; i++){
-    const s = emojiSprite("💗"); s.scale.set(0.45, 0.45, 1); s.position.copy(obj.position).add(new THREE.Vector3(rand(-0.4, 0.4), 1.3 + i * 0.2, rand(-0.4, 0.4)));
+    const s = emojiSprite(e); s.scale.set(0.45, 0.45, 1); s.position.copy(obj.position).add(new THREE.Vector3(rand(-0.4, 0.4), 1.3 + i * 0.2, rand(-0.4, 0.4)));
     s.userData = { v: new THREE.Vector3(rand(-0.3, 0.3), rand(1, 1.6), rand(-0.3, 0.3)), w: 0, vida: 1.6, sprite: true }; scene.add(s); particulas.push(s);
   }
 }
@@ -1118,14 +1382,14 @@ $("#entrar").onclick = () => {
   ["#hud", "#mapa", "#barra", "#sonido", "#foto", "#cielo"].forEach(s => $(s).classList.remove("hidden"));
   if (esTactil){ $("#joy").classList.remove("hidden"); $("#saltar").classList.remove("hidden"); }
   jugando = true; audio(); musicaAmbiente();
-  toast("¡Bienvenidx, " + yo.nombre + "! Hay mascotas, regalos, minijuegos y una cueva al norte 🐾", 5000);
+  toast("¡Bienvenidx, " + yo.nombre + "! Hay mascotas, minijuegos, un jardín de primavera al oeste y una cueva al norte 🐾", 5500);
   actualizarContadores();
 };
 $("#nombre").addEventListener("keydown", e => { if (e.key === "Enter") $("#entrar").click(); });
 
 let toastT = null;
 function toast(t, ms = 3200){ const el = $("#toast"); el.textContent = t; el.classList.add("ver"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("ver"), ms); }
-function actualizarContadores(){ if (juego) return; $("#contadores").textContent = `🐾 ${caricias}/${mascotas.length} · 🎁 ${encontrados}/${regalos.length} · 🎣 ${pescados.size}/${PECES.length}`; }
+function actualizarContadores(){ if (juego) return; $("#contadores").textContent = zona === "agua" ? `🦪 ${perlas}/${PERLAS.length} perlas · 🫧 bajo la laguna` : `🐾 ${caricias}/${mascotas.length} · 🎁 ${encontrados}/${regalos.length} · 🎣 ${pescados.size}/${PECES.length}`; }
 function mostrarCarta(titulo, texto){ $("#cartaTitulo").textContent = titulo; $("#cartaTexto").textContent = texto; $("#carta").classList.remove("hidden"); modalAbierto = true; for (const k in teclas) teclas[k] = false; }
 
 /* ============ Controles ============ */
@@ -1201,6 +1465,8 @@ function decir(){
 }
 function cerrarPaneles(){
   if (!$("#panelDecir").classList.contains("hidden")) cerrarDecir();
+  else if (!$("#panelPintar").classList.contains("hidden")) cerrarPintar();
+  else if (!$("#panelGaleria").classList.contains("hidden")) cerrarGaleria();
   else if (!$("#panelMensajes").classList.contains("hidden")) $("#cerrarMensajes").click();
   else if (!$("#carta").classList.contains("hidden")) $("#cerrarCarta").click();
 }
@@ -1230,6 +1496,11 @@ function calcularAccion(){
   prueba(Math.hypot(p.x - tablero.position.x, p.z - tablero.position.z), 3.6, { t: "📋 Leer mensajes", f: abrirMensajes });
   prueba(Math.hypot(p.x - LAGO.x, p.z - LAGO.z), 6.5, { t: "🏮 Soltar un farolito", f: farolito });
   const hasta = (o, max, a) => prueba(Math.hypot(p.x - o.x, p.z - o.z), max, a);
+  if (zona === "agua"){
+    hasta(SUPERFICIE, 3, { t: "🌤️ Subir a la superficie", f: subir });
+    hasta(COFRE_AGUA, 2.6, cofreAguaAbierto ? null : { t: `💎 Abrir el cofre (${perlas}/${PERLAS.length} 🦪)`, f: abrirCofreAgua });
+    return mejor;
+  }
   if (enCueva){
     hasta(SALIDA, 2.8, { t: "🌤️ Salir de la cueva", f: salirCueva });
     hasta(COFRE, 2.6, cofreAbierto ? null : { t: "💎 Abrir el cofre", f: abrirCofre });
@@ -1240,6 +1511,10 @@ function calcularAccion(){
   hasta(POSTE_ESTRELLAS, 2.6, juego ? null : { t: "⭐ Jugar: atrapa estrellas", f: jugarEstrellas });
   hasta(POSTE_CARRERA, 2.6, juego ? null : { t: "🏁 Jugar: carrera", f: jugarCarrera });
   hasta(MUELLE, 2.3, juego ? null : { t: "🎣 Pescar", f: pescar });
+  hasta(MUELLE_LAGUNA, 2.4, juego ? null : { t: "🤿 Bucear en la laguna", f: bucear });
+  hasta(CABALLETE, 2.6, { t: "🎨 Pintar un dibujo", f: abrirPintar });
+  hasta(GALERIA, 3.6, { t: "🖼️ Ver la galería", f: abrirGaleria });
+  hasta(POSTE_PIANO, 2.4, juego || guiaPiano ? null : { t: "🎹 Aprender «Cumpleaños feliz»", f: empezarGuia });
   prueba(Math.hypot(p.x - COHETES.x, p.z - COHETES.z), 3.2, { t: "🎆 Lanzar fuegos artificiales", f: lanzarFuegos });
   for (const a of ASIENTOS) prueba(Math.hypot(p.x - a.x, p.z - a.z) + 0.6, 2.5, { t: "🪑 Sentarse", f: () => sentarse(a) });
   for (const m of mascotas) prueba(Math.hypot(p.x - m.g.position.x, p.z - m.g.position.z), 2.0, { t: (m.tipo === "gato" ? "🐱" : "🐶") + " Acariciar a " + m.nombre, f: () => acariciar(m) });
@@ -1266,9 +1541,11 @@ function abrirCofre(){
   anunciar("💎 ¡Encontré el tesoro de la cueva!"); setTimeout(() => mostrarCarta("💎 ¡Encontraste el tesoro de la cueva!", TESORO_CUEVA), 1000);
 }
 function acariciar(m){
-  m.feliz = 2.5; m.espera = 3; m.sigue = 40; corazones(m.g); ronroneo();
+  m.feliz = 2.5; m.espera = 3; m.sigue = 40; corazones(m.g, m.angel ? "🤍" : "💗"); ronroneo();
+  const niko = "🤍 Niko te manda un abracito desde el cielo";
   if (!m.acariciada){ m.acariciada = true; caricias++; actualizarContadores();
-    toast(caricias === mascotas.length ? "¡Acariciaste a todas las mascotas! 🐾💖" : `${m.nombre} está feliz y te va a seguir un ratito 💗`); }
+    toast(caricias === mascotas.length ? "¡Acariciaste a todas las mascotas! 🐾💖" : m.angel ? niko : `${m.nombre} está feliz y te va a seguir un ratito 💗`, 3800); }
+  else if (m.angel) toast(niko, 3800);
 }
 
 /* ============ Minijuegos ============ */
@@ -1348,7 +1625,7 @@ function actualizarJuegos(dt, t){
   }
   // los cristales suenan al acercarse, haya juego o no
   let cerca = -1;
-  if (enCueva) for (let i = 0; i < 4; i++) if (Math.hypot(yo.pos.x - CRISTALES[i].x, yo.pos.z - CRISTALES[i].z) < 1.55) cerca = i;
+  if (zona === "cueva") for (let i = 0; i < 4; i++) if (Math.hypot(yo.pos.x - CRISTALES[i].x, yo.pos.z - CRISTALES[i].z) < 1.55) cerca = i;
   const toco = cerca !== cristalSobre && cerca >= 0; cristalSobre = cerca;
   const j = juego;
   if (!j){ if (toco) encender(cerca); return; }
@@ -1384,6 +1661,159 @@ function actualizarJuegos(dt, t){
     }
   }
 }
+
+/* ============ Piano gigante ============ */
+const MELODIA = [0, 0, 1, 0, 3, 2, 0, 0, 1, 0, 4, 3, 0, 0, 7, 5, 3, 2, 1, 6, 6, 5, 3, 4, 3]; // Cumpleaños feliz (dominio público)
+let guiaPiano = null, miTecla = -1, yoEnSuelo = true;
+const flechaPiano = emojiSprite("⬇️"); flechaPiano.visible = false; scene.add(flechaPiano);
+function teclaEn(x, z){
+  if (Math.abs(z - PIANO.z) > 2.1) return -1;
+  const i = Math.floor((x - PIANO_X0) / PIANO.kw); return i >= 0 && i < PIANO.n ? i : -1;
+}
+function tocarTecla(i, vol = 1){
+  const k = teclasPiano[i]; k.luz = 1; k.baja = 1;
+  if (vol > 0.02){ const f = NOTAS_PIANO[i]; tono(f, 1.3, 0, 0.075 * vol, "triangle"); tono(f * 2, 0.7, 0, 0.022 * vol); tono(f / 2, 0.9, 0, 0.02 * vol); }
+}
+function empezarGuia(){
+  if (juego) return; guiaPiano = { i: 0 };
+  toast("🎹 Pisa la tecla que marca la flecha para tocar «Cumpleaños feliz»", 4000);
+}
+function pisarTecla(i){
+  tocarTecla(i);
+  if (!guiaPiano) return;
+  if (i === MELODIA[guiaPiano.i] && ++guiaPiano.i === MELODIA.length){
+    guiaPiano = null; flechaPiano.visible = false; confeti(yo.pos.x, 2, yo.pos.z, 90); campanita();
+    toast("🎹 ¡Tocaste «Cumpleaños feliz» para " + CUMPLE + "! 🎂", 5000); anunciar("🎹 ¡Toqué «Cumpleaños feliz»!");
+  }
+}
+function actualizarPiano(dt, t){
+  for (const k of teclasPiano){ k.luz = Math.max(0, k.luz - dt * 2.2); k.baja = Math.max(0, k.baja - dt * 5); k.mat.emissiveIntensity = k.luz * 0.9; k.k.position.y = 0.08 - k.baja * 0.05; }
+  if (guiaPiano){
+    const k = teclasPiano[MELODIA[guiaPiano.i]]; flechaPiano.visible = true;
+    flechaPiano.position.set(k.k.position.x, 1.3 + Math.abs(Math.sin(t * 5)) * 0.35, PIANO.z + 0.4);
+    k.mat.emissiveIntensity = Math.max(k.mat.emissiveIntensity, 0.35 + Math.sin(t * 6) * 0.15);
+    if (Math.hypot(yo.pos.x - PIANO.x, yo.pos.z - PIANO.z) > 16){ guiaPiano = null; flechaPiano.visible = false; }
+  }
+  // yo: suena al entrar en una tecla o al caer sobre ella después de un salto
+  const ti = zona === "isla" ? teclaEn(yo.pos.x, yo.pos.z) : -1, aterrizo = yo.enSuelo && !yoEnSuelo;
+  if (ti >= 0 && (ti !== miTecla || aterrizo)) pisarTecla(ti);
+  miTecla = ti; yoEnSuelo = yo.enSuelo;
+}
+// los demás también tocan: cada quien escucha el piano según dónde esté cada muñequito, sin mandar nada por la red
+function pianoRemoto(r, q){
+  const ti = zona === "isla" && zonaDe(q.x, q.z) === "isla" ? teclaEn(q.x, q.z) : -1, suelo = q.y < 0.05;
+  if (ti >= 0 && (ti !== r.tecla || (suelo && !r.suelo))) tocarTecla(ti, Math.max(0, 1 - Math.hypot(q.x - yo.pos.x, q.z - yo.pos.z) / 30));
+  r.tecla = ti; r.suelo = suelo;
+}
+
+/* ============ Pintar y galería de dibujos ============ */
+const lienzo = $("#lienzo"), lz = lienzo.getContext("2d");
+const COLORES_PINCEL = ["#5b4a6b", "#f06292", "#ffb3cc", "#ff9b6a", "#ffd76a", "#8fd694", "#6fc8b8", "#7fb8f0", "#b79be8", "#c98f5a", "#ffffff"];
+let pincel = { color: COLORES_PINCEL[1], tam: 10, borrar: false }, trazo = null, pintado = false, deshacer = [], ultimoDibujo = 0;
+let galeria = null, dibujos = [], dibujosLocales = [], galeriaLista = false;
+function limpiarLienzo(){ lz.fillStyle = "#ffffff"; lz.fillRect(0, 0, lienzo.width, lienzo.height); pintado = false; }
+limpiarLienzo();
+{
+  const cont = $("#pinceles");
+  COLORES_PINCEL.forEach((c, i) => { const b = document.createElement("button"); b.type = "button"; b.className = "color" + (i === 1 ? " sel" : ""); b.style.background = c; b.title = c;
+    b.onclick = () => { pincel.color = c; pincel.borrar = false; cont.querySelectorAll("button").forEach(x => x.classList.remove("sel")); b.classList.add("sel"); $("#borrador").classList.remove("sel"); }; cont.appendChild(b); });
+  document.querySelectorAll("[data-tam]").forEach(b => b.onclick = () => { pincel.tam = +b.dataset.tam; document.querySelectorAll("[data-tam]").forEach(x => x.classList.remove("sel")); b.classList.add("sel"); });
+}
+const puntoLienzo = e => { const r = lienzo.getBoundingClientRect(); return [(e.clientX - r.left) * lienzo.width / r.width, (e.clientY - r.top) * lienzo.height / r.height]; };
+function linea(a, b){
+  lz.strokeStyle = lz.fillStyle = pincel.borrar ? "#ffffff" : pincel.color; lz.lineWidth = pincel.tam * (pincel.borrar ? 2.2 : 1); lz.lineCap = lz.lineJoin = "round";
+  lz.beginPath(); lz.moveTo(a[0], a[1]); lz.lineTo(b[0], b[1]); lz.stroke();
+}
+lienzo.addEventListener("pointerdown", e => {
+  e.preventDefault(); if (trazo) return;
+  deshacer.push(lz.getImageData(0, 0, lienzo.width, lienzo.height)); if (deshacer.length > 12) deshacer.shift();
+  trazo = { id: e.pointerId, p: puntoLienzo(e) }; lienzo.setPointerCapture(e.pointerId); linea(trazo.p, trazo.p); pintado = true;
+});
+lienzo.addEventListener("pointermove", e => {
+  if (!trazo || trazo.id !== e.pointerId) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  for (const ev of (evs.length ? evs : [e])){ const p = puntoLienzo(ev); linea(trazo.p, p); trazo.p = p; }
+});
+const finTrazo = e => { if (trazo && trazo.id === e.pointerId) trazo = null; };
+lienzo.addEventListener("pointerup", finTrazo); lienzo.addEventListener("pointercancel", finTrazo);
+$("#borrador").onclick = () => { pincel.borrar = !pincel.borrar; $("#borrador").classList.toggle("sel", pincel.borrar); };
+$("#deshacer").onclick = () => { const d = deshacer.pop(); if (d) lz.putImageData(d, 0, 0); };
+$("#limpiar").onclick = () => { deshacer.push(lz.getImageData(0, 0, lienzo.width, lienzo.height)); limpiarLienzo(); };
+function abrirPintar(){ cerrarGaleria(); modalAbierto = true; for (const k in teclas) teclas[k] = false; $("#panelPintar").classList.remove("hidden"); $("#estadoPintar").textContent = galeria ? "Cuando lo cuelgues, lo verán todos en la galería del jardín." : "Vista previa: aquí el dibujo no se guarda para los demás."; }
+function cerrarPintar(){ $("#panelPintar").classList.add("hidden"); modalAbierto = false; trazo = null; }
+function dibujoJpeg(){
+  const c = document.createElement("canvas"); c.width = c.height = 288; c.getContext("2d").drawImage(lienzo, 0, 0, 288, 288);
+  let q = 0.85, url = c.toDataURL("image/jpeg", q);
+  while (url.length > 60000 && q > 0.35){ q -= 0.15; url = c.toDataURL("image/jpeg", q); }
+  return url;
+}
+$("#cerrarPintar").onclick = cerrarPintar;
+$("#guardarDibujo").onclick = () => {
+  const a = document.createElement("a"); a.href = lienzo.toDataURL("image/png"); a.download = "dibujo-para-" + CUMPLE.toLowerCase() + ".png"; document.body.appendChild(a); a.click(); a.remove();
+};
+$("#colgar").onclick = async () => {
+  if (!pintado) return toast("Pinta algo primero 🎨", 2200);
+  if (Date.now() - ultimoDibujo < 15000) return toast("Espera un momentito antes de colgar otro dibujo 🙂", 2600);
+  const d = { nombre: yo.nombre, color: yo.color, img: dibujoJpeg(), at: Date.now() };
+  $("#colgar").disabled = true;
+  try {
+    if (galeria) await galeria.guardar(d); else { dibujosLocales.unshift(d); nuevosDibujos(dibujosLocales); }
+    ultimoDibujo = Date.now(); cerrarPintar(); limpiarLienzo(); deshacer = []; campanita(); confeti(yo.pos.x, 2, yo.pos.z, 50);
+    toast("🖼️ ¡Tu dibujo ya está colgado en la galería!", 3800); anunciar("🎨 ¡Colgué un dibujo en la galería!");
+  } catch (e) {
+    $("#estadoPintar").textContent = /permission|permiso/i.test(String(e && (e.code || e.message) || e)) ? "La galería todavía no está activada en la base de datos. Puedes guardar tu dibujo con 💾 mientras tanto." : "No se pudo colgar el dibujo. Revisa tu conexión e inténtalo otra vez.";
+  }
+  $("#colgar").disabled = false;
+};
+const esImagen = s => typeof s === "string" && s.length < 80000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s);
+const imgCache = new Map(); let repintarGaleria = 0;
+function imagenDe(src){
+  let im = imgCache.get(src);
+  if (!im){ im = new Image(); im.onload = () => { cancelAnimationFrame(repintarGaleria); repintarGaleria = requestAnimationFrame(() => pintarGaleria3D()); }; im.src = src; imgCache.set(src, im); }
+  return im;
+}
+function pintarGaleria3D(){
+  const c = document.createElement("canvas"); c.width = 1220; c.height = 660; const x = c.getContext("2d");
+  x.fillStyle = "#e9cfb2"; x.fillRect(0, 0, 1220, 660);
+  x.fillStyle = "#b0688a"; x.font = "800 50px 'Baloo 2', sans-serif"; x.textAlign = "center"; x.fillText("Galería de dibujos para " + CUMPLE + " 🎨", 610, 62);
+  const lista = (galeria ? dibujos : dibujosLocales).slice(0, 6);
+  if (!lista.length){ x.fillStyle = "#7a6688"; x.font = "600 38px 'Baloo 2', sans-serif"; x.fillText("Usa el caballete 🎨 para pintar el primero", 610, 360); }
+  lista.forEach((d, i) => {
+    const cx = 25 + (i % 3) * 395, cy = 92 + Math.floor(i / 3) * 284;
+    x.save(); x.translate(cx + 185, cy + 135); x.rotate(((i * 37) % 7 - 3) * 0.01); x.translate(-185, -135);
+    x.fillStyle = "#fffaf2"; x.shadowColor = "rgba(0,0,0,.18)"; x.shadowBlur = 10; x.fillRect(0, 0, 370, 270); x.shadowBlur = 0;
+    const im = imagenDe(d.img); if (im.complete && im.naturalWidth) x.drawImage(im, 92, 12, 186, 186);
+    x.fillStyle = "#b0688a"; x.font = "800 30px 'Baloo 2', sans-serif"; x.fillText(String(d.nombre || "Alguien").slice(0, 18), 185, 240);
+    x.restore();
+  });
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  if (galeriaCara.material.map) galeriaCara.material.map.dispose();
+  galeriaCara.material.map = t; galeriaCara.material.needsUpdate = true;
+}
+function nuevosDibujos(lista){
+  const antes = dibujos.length && dibujos[0].at;
+  if (galeria) dibujos = lista.filter(d => d && esImagen(d.img)).slice(0, 60);
+  pintarGaleria3D();
+  const d = dibujos[0];
+  if (galeriaLista && jugando && d && antes && d.at > antes && d.nombre !== yo.nombre) toast(`🖼️ ${String(d.nombre || "Alguien").slice(0, 18)} colgó un dibujo en la galería`);
+  galeriaLista = true;
+  if (!$("#panelGaleria").classList.contains("hidden")) renderGaleria();
+}
+function renderGaleria(){
+  const cont = $("#galeriaLista"); cont.innerHTML = "";
+  const lista = galeria ? dibujos : dibujosLocales;
+  if (!lista.length){ const n = document.createElement("div"); n.className = "nota"; n.textContent = "Todavía no hay dibujos. ¡Pinta el primero!"; cont.appendChild(n); return; }
+  for (const d of lista){
+    const f = document.createElement("figure"), im = document.createElement("img"), cap = document.createElement("figcaption");
+    im.src = d.img; im.alt = "Dibujo de " + String(d.nombre || "alguien"); cap.textContent = String(d.nombre || "Alguien").slice(0, 18);
+    f.append(im, cap); cont.appendChild(f);
+  }
+}
+function abrirGaleria(){ modalAbierto = true; for (const k in teclas) teclas[k] = false; $("#panelGaleria").classList.remove("hidden"); renderGaleria(); }
+function cerrarGaleria(){ if ($("#panelGaleria").classList.contains("hidden")) return; $("#panelGaleria").classList.add("hidden"); modalAbierto = false; }
+$("#cerrarGaleria").onclick = cerrarGaleria;
+$("#irPintar").onclick = abrirPintar;
+pintarGaleria3D();
 
 /* ============ Mensajes (persistentes) ============ */
 let almacen = null, mensajes = [], mensajesLocales = [];
@@ -1554,6 +1984,11 @@ async function iniciarFirebase(){
     }
   }, sinPermiso);
 
+  // Galería de dibujos (si la base aún no tiene permiso para esto, el resto sigue funcionando)
+  fdb.ref("dibujos").limitToLast(40).on("value", snap => {
+    const l = []; snap.forEach(c => { const v = c.val(); if (v && esImagen(v.img)) l.push({ nombre: v.nombre, color: v.color, img: v.img, at: +v.at || 0 }); });
+    l.sort((a, b) => b.at - a.at); nuevosDibujos(l);
+  }, e => console.warn("La galería no tiene permiso en la base:", e && e.code));
   // Mensajes guardados
   fdb.ref("mensajes").limitToLast(200).on("value", snap => {
     const lista = [];
@@ -1563,6 +1998,9 @@ async function iniciarFirebase(){
   const conTiempo = (promesa, ms) => Promise.race([promesa, new Promise((_, no) => setTimeout(() => no(new Error("tiempo agotado")), ms))]);
   almacen = { guardar: m => conectado
     ? conTiempo(Promise.resolve(fdb.ref("mensajes").push({ nombre: m.nombre, texto: m.texto, color: m.color, at: TS })), 9000)
+    : Promise.reject(new Error("sin conexión")) };
+  galeria = { guardar: d => conectado
+    ? conTiempo(Promise.resolve(fdb.ref("dibujos").push({ nombre: d.nombre, color: d.color, img: d.img, at: TS })), 15000)
     : Promise.reject(new Error("sin conexión")) };
 
   red = {
@@ -1595,6 +2033,8 @@ async function iniciarClaude(){
     if (db){
       almacen = { guardar: m => db.collection("mensajes").add(m) };
       db.collection("mensajes").orderBy("at", "desc").limit(200).onSnapshot(snap => nuevosMensajes(snap.docs.map(d => d.data()).filter(Boolean)), () => {});
+      galeria = { guardar: d => db.collection("dibujos").add(d) };
+      db.collection("dibujos").orderBy("at", "desc").limit(40).onSnapshot(snap => nuevosDibujos(snap.docs.map(d => d.data()).filter(Boolean)), () => {});
     }
   } catch (e) {}
   try {
@@ -1622,23 +2062,30 @@ async function iniciarClaude(){
 const mapa = $("#mapa"), mx = mapa.getContext("2d");
 function dibujarMapa(){
   const W = 264; mx.clearRect(0, 0, W, W); mx.save(); mx.translate(W / 2, W / 2);
-  const ox = enCueva ? CUEVA.x + 0.75 : 0, oz = enCueva ? CUEVA.z + 0.25 : -14, s = W / 2 / (enCueva ? 21 : 50);
+  const ox = zona === "cueva" ? CUEVA.x + 0.75 : zona === "agua" ? AGUA.x + 0.5 : -15.5, oz = zona === "cueva" ? CUEVA.z + 0.25 : zona === "agua" ? AGUA.z - 7 : -12.5;
+  const s = W / 2 / (zona === "cueva" ? 21 : zona === "agua" ? 24.5 : 51);
   const X = x => (x - ox) * s, Z = z => (z - oz) * s, disco = (x, z, r, c) => { mx.fillStyle = c; mx.beginPath(); mx.arc(X(x), Z(z), r, 0, TAU); mx.fill(); };
   const icono = (e, x, z, px) => { mx.font = px + "px serif"; mx.fillText(e, X(x), Z(z)); };
   mx.textAlign = "center"; mx.textBaseline = "middle";
-  if (enCueva){
+  if (zona === "agua"){
+    disco(ox, oz, W / 2, "#2f6f9a");
+    for (const [x, z, r] of ZONAS.agua) disco(x, z, r * s, "#8fd0e6");
+    icono("🌤️", SUPERFICIE.x, SUPERFICIE.z, 22); if (!cofreAguaAbierto) icono("❓", COFRE_AGUA.x, COFRE_AGUA.z, 20);
+  } else if (zona === "cueva"){
     disco(ox, oz, W / 2, "#3a3454");
     for (const [x, z, r] of ZONAS.cueva) disco(x, z, r * s, "#9089b0");
     icono("🌤️", SALIDA.x, SALIDA.z, 22); icono("🎶", POSTE_CRISTALES.x, POSTE_CRISTALES.z, 22); if (!cofreAbierto) icono("❓", COFRE.x, COFRE.z, 20);
   } else {
-    disco(0, 0, 34 * s, "#fbe6c2"); disco(LOBULO.x, LOBULO.z, 20 * s, "#fbe6c2"); disco(0, 0, 32 * s, "#bfe6b4"); disco(LOBULO.x, LOBULO.z, 18 * s, "#bfe6b4");
+    disco(0, 0, 34 * s, "#fbe6c2"); disco(LOBULO.x, LOBULO.z, 20 * s, "#fbe6c2"); disco(PRIMAVERA.x, PRIMAVERA.z, 21 * s, "#fbe6c2");
+    disco(0, 0, 32 * s, "#bfe6b4"); disco(LOBULO.x, LOBULO.z, 18 * s, "#bfe6b4"); disco(PRIMAVERA.x, PRIMAVERA.z, 19 * s, "#cdeeb8");
     for (const a of arboles) disco(a.x, a.z, 3, "#9ccf9e");
-    disco(LAGO.x, LAGO.z, 4.2 * s, "#9fd4ea"); disco(COLINA.x, COLINA.z, 6 * s, "#b9b2c8");
+    disco(LAGO.x, LAGO.z, 4.2 * s, "#9fd4ea"); disco(LAGUNA.x, LAGUNA.z, LAGUNA.r * s, "#9fd4ea"); disco(COLINA.x, COLINA.z, 6 * s, "#b9b2c8");
     icono("🎂", 0, 0, 22); icono("💌", buzon.position.x, buzon.position.z, 18); icono("🔥", FOGATA.x, FOGATA.z, 16); icono("🎆", COHETES.x, COHETES.z, 16);
     icono("🕳️", BOCA.x, BOCA.z - 3, 18); icono("⭐", POSTE_ESTRELLAS.x, POSTE_ESTRELLAS.z, 15); icono("🏁", POSTE_CARRERA.x, POSTE_CARRERA.z, 15); icono("🎣", MUELLE.x, MUELLE.z, 15);
+    icono("🎹", PIANO.x, PIANO.z, 15); icono("🎨", CABALLETE.x, CABALLETE.z, 14); icono("🖼️", GALERIA.x, GALERIA.z, 14); icono("🤿", LAGUNA.x, LAGUNA.z, 15);
     for (const m of mascotas) icono("🐾", m.g.position.x, m.g.position.z, 13);
   }
-  for (const [, r] of remotos){ const q = r.av.g.position; if (enLaCueva(q.z) !== enCueva) continue; disco(q.x, q.z, 6, "#fff"); disco(q.x, q.z, 4.5, r.clave.split("|")[1]); }
+  for (const [, r] of remotos){ const q = r.av.g.position; if (zonaDe(q.x, q.z) !== zona) continue; disco(q.x, q.z, 6, "#fff"); disco(q.x, q.z, 4.5, r.clave.split("|")[1]); }
   mx.translate(X(yo.pos.x), Z(yo.pos.z)); mx.rotate(-yo.rot + Math.PI);
   mx.fillStyle = "#b0688a"; mx.beginPath(); mx.moveTo(0, -10); mx.lineTo(7, 7); mx.lineTo(-7, 7); mx.closePath(); mx.fill();
   mx.restore();
@@ -1678,7 +2125,23 @@ function loop(){
   llamas.forEach((l, i) => { l.scale.y = 1.6 + Math.sin(t * 12 + i) * 0.25; });
   if (velasEncendidas) luzPastel.intensity = 0.75 + Math.sin(t * 9) * 0.08;
   bandera.rotation.z = Math.sin(t * 2) * 0.1;
-  enCueva = enLaCueva(yo.pos.z); aplicarCielo(dt);
+  const zonaAntes = zona; zona = zonaDe(yo.pos.x, yo.pos.z); enCueva = zona !== "isla"; if (enCueva) interior = zona;
+  if (zona !== zonaAntes) actualizarContadores();
+  aplicarCielo(dt);
+  if (zona === "isla"){
+    const P = petalos.geometry.attributes.position;
+    for (let i = 0; i < PETALOS.length; i++){ const q = PETALOS[i]; q.y -= q.v * dt; if (q.y < 0.05) q.y = 9; P.setXYZ(i, q.x + Math.sin(t * 0.8 + q.f) * 0.8, q.y, q.z + Math.cos(t * 0.6 + q.f) * 0.8); }
+    P.needsUpdate = true;
+    if (!vistoJardin && jugando && Math.hypot(yo.pos.x - PRIMAVERA.x, yo.pos.z - PRIMAVERA.z) < 15){ vistoJardin = true; toast("🌸 Jardín de primavera: hay un piano gigante, un caballete para pintar y una laguna para bucear", 5500); }
+  }
+  if (aguaG.visible){
+    for (const a of ALGAS) a.g.rotation.z = Math.sin(t * 1.3 + a.f) * 0.12;
+    for (const f of PECES_AGUA){ const a = t * f.v + f.f; f.s.position.set(f.cx + Math.cos(a) * f.r, f.y + Math.sin(t * 1.5 + f.f) * 0.2, f.cz + Math.sin(a) * f.r); f.s.scale.x = (-Math.sin(a) * f.v > 0 ? -0.9 : 0.9); }
+    const B = burbujas.geometry.attributes.position;
+    for (let i = 0; i < B.count; i++){ let y = B.getY(i) + dt * (0.8 + (i % 5) * 0.2); if (y > 10) y = 0; B.setY(i, y); B.setX(i, B.getX(i) + Math.sin(t * 2 + i) * dt * 0.2); }
+    B.needsUpdate = true;
+  }
+  tapaAgua.rotation.x = lerp(tapaAgua.rotation.x, cofreAguaAbierto ? -1.25 : 0, Math.min(1, dt * 4));
   for (let i = 0; i < postes.length; i++) postes[i].position.y = 2.7 + Math.sin(t * 2 + i) * 0.12;
   for (const c of CRISTALES){ c.luz = Math.max(0, c.luz - dt * 1.6); c.mat.emissiveIntensity = 0.35 + c.luz * 1.8; c.m.scale.setScalar(1 + c.luz * 0.12); }
   cofreTapa.rotation.x = lerp(cofreTapa.rotation.x, cofreAbierto ? -1.25 : 0, Math.min(1, dt * 4));
@@ -1723,6 +2186,7 @@ function loop(){
       else { const v = 1.1; g.position.x += dx / d * v * dt; g.position.z += dz / d * v * dt; m.rot = angLerp(m.rot, Math.atan2(dx, dz), dt * 4); mov = 1; resolverColisiones(g.position, 0.4); }
     }
     g.rotation.y = m.rot;
+    if (u.alas){ g.position.y = 0.32 + Math.sin(t * 1.6) * 0.1; const al = Math.sin(t * (m.feliz > 0 ? 10 : 3.2)) * 0.4; u.alas[0].rotation.z = -al; u.alas[1].rotation.z = al; u.halo.position.y = 0.5 + Math.sin(t * 2.2) * 0.03; }
     u.patas.forEach((p, i) => p.position.y = 0.15 + (mov ? Math.max(0, Math.sin(t * 12 + i * Math.PI / 2)) * 0.08 : 0));
   }
   // jugador
@@ -1744,7 +2208,7 @@ function loop(){
       yo.vel = mag;
     } else yo.vel = 0;
     if (!yo.sentado){
-      yo.vy -= 20 * dt; yo.pos.y += yo.vy * dt;
+      yo.vy -= (zona === "agua" ? 7 : 20) * dt; yo.pos.y += yo.vy * dt;
       if (yo.pos.y <= 0){ yo.pos.y = 0; yo.vy = 0; yo.enSuelo = true; }
       resolverColisiones(yo.pos);
     }
@@ -1761,7 +2225,11 @@ function loop(){
         else toast(`🎁 "${FRASES_REGALOS[encontrados - 1]}"`, 5000);
       }
     }
-    actualizarJuegos(dt, t);
+    actualizarJuegos(dt, t); actualizarPiano(dt, t);
+    if (zona === "agua") for (const q of PERLAS) if (!q.tomada && Math.hypot(yo.pos.x - q.x, yo.pos.z - q.z) < 1.4){
+      q.tomada = true; q.perla.visible = false; perlas++; campanita(); confeti(q.x, 1, q.z, 30, [0xffffff, 0xffd6e2, 0xbfe8ff]); actualizarContadores();
+      toast(perlas === PERLAS.length ? "🦪 ¡Tienes las 4 perlas! Ahora busca el cofre al fondo de las rutas" : `🦪 ¡Encontraste una perla! (${perlas}/${PERLAS.length})`, 3800);
+    }
     // botón de acción
     const a = calcularAccion();
     if ((a && a.t) !== (accionActual && accionActual.t)){ accionActual = a; $("#accion").classList.toggle("hidden", !a); if (a) $("#accion").textContent = a.t + (esTactil ? "" : "  (E)"); }
@@ -1776,7 +2244,7 @@ function loop(){
     let paso = 0;
     if (d > 1e-4){ paso = Math.min(d, r.vel * dt); q.x += dx / d * paso; q.y += dy / d * paso; q.z += dz / d * paso; }
     g.rotation.y = angLerp(g.rotation.y, r.r, Math.min(1, dt * 10));
-    r.av.sombra.position.y = 0.02 - q.y; g.visible = enLaCueva(q.z) === enCueva;
+    r.av.sombra.position.y = 0.02 - q.y; g.visible = zonaDe(q.x, q.z) === zona; if (jugando) pianoRemoto(r, q);
     const caminando = q.y < 0.05 && paso / Math.max(dt, 1e-3) > 0.8;
     r.mov = lerp(r.mov, caminando ? 1 : 0, Math.min(1, dt * 14));
     animarMunequito(r.av, t, r.mov > 0.5 ? 1 : 0, dt, r.sent);
@@ -1804,7 +2272,7 @@ function loop(){
   medirRendimiento(dt);
 }
 $("#cerrarCarta").onclick = () => { $("#carta").classList.add("hidden"); modalAbierto = false; confeti(yo.pos.x, 2, yo.pos.z, 100); };
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { pintarLetrero(); pintarTablero(almacen ? mensajes : mensajesLocales); mascotas.forEach(m => { const v = m.g.children.find(c => c.isSprite); if (v){ m.g.remove(v); const tag = etiqueta(m.nombre, 0.75); tag.position.y = 1.65; m.g.add(tag); } }); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { pintarLetrero(); pintarTablero(almacen ? mensajes : mensajesLocales); mascotas.forEach(m => { const v = m.g.children.find(c => c.isSprite); if (v){ m.g.remove(v); const tag = etiqueta(m.tagTxt, 0.75 / m.g.scale.x); tag.position.y = m.tagY; m.g.add(tag); } }); pintarGaleria3D(); });
 loop();
 </script>
 </body>

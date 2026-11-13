@@ -40,7 +40,11 @@ Todas las personas que abran el enlace al mismo tiempo se ven entre sí. Arriba 
 
 - **Dejarle un mensaje a Andrew.** Con el botón 💌, o acercándote al buzón rosado. Los mensajes quedan guardados y también se ven en el tablero de madera que está al lado. Este es el regalo más importante, así que no te vayas sin dejar el tuyo.
 - **Soplar las velas.** Acércate al pastel del centro. Suena la canción y cae confeti para todos.
-- **Acariciar a los gatitos y perritos.** Son siete y andan paseando por la isla. Después de una caricia te siguen un ratito.
+- **Acariciar a las mascotas.** Andan paseando por la isla y después de una caricia te siguen un ratito:
+  - **Gris**, la gatita gris de Andrew.
+  - **Dominik**, el peludito blanco, que vive en el jardín de primavera.
+  - **Niko**, el beagle de Andrew. Se fue al cielo en junio, así que aquí tiene alitas y aureola, y flota un poquito. 🤍
+  - **Max**, **Zeus** y **Boster**, los huskies de Lau.
 - **Buscar los cinco regalos escondidos** entre los árboles. Cada uno trae una frase, y al encontrarlos todos aparece una carta.
 - **Soltar farolitos** en el laguito. Los ven todos los que estén en la isla.
 - **Lanzar fuegos artificiales** desde la caja de cohetes (🎆 en el mapa).
@@ -49,6 +53,15 @@ Todas las personas que abran el enlace al mismo tiempo se ven entre sí. Arriba 
 - **Saludar, mandar corazones, celebrar, sonreír o bailar** con los botones de abajo.
 - **Tomar fotos de recuerdo** con 📸. Se guardan con un letrerito de feliz cumpleaños.
 - **Ver el atardecer.** Cada pocos minutos anochece para todos a la vez: salen estrellas, luciérnagas y se encienden las farolas. Con el botón 🌗 puedes dejarlo siempre de día o siempre de noche solo para ti.
+
+## El jardín de primavera
+
+Porque la primavera es la estación favorita de Andrew, al oeste de la isla (pasando el arco de flores, 🌸 en el mapa) hay un jardín lleno de cerezos, tulipanes y pétalos que caen. Ahí están:
+
+- **🎹 El piano gigante.** Camina sobre las teclas para tocar. Todos los que estén cerca escuchan lo que tocan los demás, así que se puede tocar en grupo. En el poste del piano puedes aprender «Cumpleaños feliz»: una flecha te va marcando qué tecla pisar.
+- **🎨 El caballete.** Abre una ventana para pintar con el dedo o el mouse, con colores, tres grosores, borrador y deshacer. Con **Colgar en la galería** tu dibujo queda guardado para todos, y con 💾 lo descargas.
+- **🖼️ La galería.** Un tablón con los últimos dibujos. Acércate para verlos todos en grande.
+- **🤿 La laguna.** Desde el muellecito puedes bucear. Abajo hay rutas entre corales, algas y peces de colores. En los rincones sin salida hay cuatro perlas escondidas, y con las cuatro se abre el cofre del fondo. Para volver, busca el rayo de luz de la entrada.
 
 ## Minijuegos
 
@@ -76,7 +89,7 @@ El mapa redondo de arriba a la derecha muestra dónde estás tú, tus amigos, la
 
 - Todo vive en `index.html`. El 3D usa Three.js y no hay que instalar nada.
 - El multijugador y los mensajes usan Firebase Realtime Database. La dirección de la base está al inicio del script, en `CONFIG.firebaseUrl`. Si se deja vacía, la página funciona como vista previa para una sola persona.
-- `reglas-firebase.json` es una copia de las reglas publicadas en Firebase (pestaña Rules de Realtime Database).
+- `reglas-firebase.json` es una copia de las reglas publicadas en Firebase (pestaña Rules de Realtime Database). Si las cambias aquí, hay que pegarlas también allá y tocar Publish.
 - `preview.png` es la imagen que aparece al compartir el enlace.
 
 Los textos se cambian al inicio del `<script>` de `index.html`:
@@ -84,6 +97,7 @@ Los textos se cambian al inicio del `<script>` de `index.html`:
 - `CUMPLE`: el nombre que aparece en el letrero y en los mensajes.
 - `FRASES_REGALOS`: las cinco frases de los regalos escondidos. Juntas forman la carta final.
 - `TESORO_CUEVA`: lo que dice el cofre del fondo de la cueva.
-- `MASCOTAS_DEF`: nombres y colores de los gatitos y perritos.
+- `TESORO_LAGUNA`: lo que dice el cofre de las rutas bajo la laguna.
+- `MASCOTAS_DEF`: nombres, colores y detalles de las mascotas.
 
-Para moderar, en la consola de Firebase, dentro de Realtime Database, pestaña Data, carpeta `mensajes`, se puede borrar cualquier mensaje. Desde la página nadie puede editar ni borrar los mensajes de otra persona.
+Para moderar, en la consola de Firebase, dentro de Realtime Database, pestaña Data, carpetas `mensajes` y `dibujos`, se puede borrar cualquier mensaje o dibujo. Desde la página nadie puede editar ni borrar los mensajes de otra persona.
